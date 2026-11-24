@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grafo neon</title>
+<meta name="description" content="Cole o link de um repositório público do GitHub e veja as dependências entre os arquivos desenhadas como um raio neon.">
+<meta property="og:title" content="Grafo neon">
+<meta property="og:description" content="As dependências de qualquer repositório público do GitHub, desenhadas como um raio neon.">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<header class="topo">
+  <h1 class="marca">Grafo <span>neon</span></h1>
+  <p class="sub">Cole o link de um repositório público do GitHub e veja os imports entre os arquivos virarem um raio.</p>
+  <form id="formRepo" autocomplete="off">
+    <input id="link" placeholder="github.com/dono/repo" inputmode="url" autocapitalize="off" spellcheck="false" aria-label="Link do repositório no GitHub">
+    <button type="submit" id="ir" class="forte">Desenhar</button>
+  </form>
+  <div class="opcoes">
+    <label><input type="checkbox" id="semTestes" checked> Ignorar testes</label>
+    <span class="exemplos">Exemplos:
+      <button type="button" class="ex" data-r="pallets/flask">pallets/flask</button>
+      <button type="button" class="ex" data-r="psf/requests">psf/requests</button>
+      <button type="button" class="ex" data-r="Netero-mac/grao">Netero-mac/grao</button>
+    </span>
+  </div>
+  <p class="status" id="status" role="status" aria-live="polite"></p>
+  <div class="barra" id="barra" hidden><i id="barraFill"></i></div>
+</header>
+
+<main>
+  <div class="fig" id="fig"><canvas id="cv" role="img" aria-label="Grafo de dependências do projeto"></canvas></div>
+  <section class="painel">
+    <h2 class="titulo" id="titulo"></h2>
+    <p class="meta"><span id="meta"></span> <a id="origem" href="#" target="_blank" rel="noopener" hidden>ver no GitHub ↗</a></p>
+    <p class="leg">Cada fio é um import entre dois arquivos do projeto: quem importa fica acima, o que é importado fica abaixo. O raio branco é a maior cadeia de dependências.</p>
+    <p class="cadeia" id="cadeia"></p>
+    <form id="formBusca" autocomplete="off">
+      <input id="busca" list="lista" placeholder="Buscar arquivo…" aria-label="Buscar arquivo no grafo">
+      <datalist id="lista"></datalist>
+      <button type="button" id="semente">Nova semente</button>
+      <button type="button" id="limpar" hidden>Limpar seleção</button>
+    </form>
+    <div class="ficha" id="ficha" hidden>
+      <h3 id="fNome"></h3>
+      <p class="cam" id="fCam"></p>
+      <p class="num" id="fNum"></p>
+      <h4>Importa</h4><div class="chips" id="fDeps"></div>
+      <h4>É importado por</h4><div class="chips" id="fUsos"></div>
+    </div>
+    <p class="nota">Toque num rótulo ou perto de um fio para acender o que aquele arquivo puxa. Lê Python, PHP, Kotlin, Java e JavaScript/TypeScript. Sem login, o GitHub libera 60 consultas por hora e cada repositório gasta 2. Código no <a href="https://github.com/Netero-mac/Grafo-neon" target="_blank" rel="noopener">GitHub</a>.</p>
+  </section>
+</main>
+<script src="analisador.js"></script>
+<script src="render.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
