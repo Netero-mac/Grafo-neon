@@ -2,11 +2,13 @@
 
 [![testes](https://github.com/Netero-mac/Grafo-neon/actions/workflows/testes.yml/badge.svg)](https://github.com/Netero-mac/Grafo-neon/actions/workflows/testes.yml)
 
+**Português** · [English](README.en.md)
+
 Cole o link de um repositório público do GitHub e veja as dependências entre os arquivos desenhadas como um raio neon.
 
 **Site:** https://netero-mac.github.io/Grafo-neon/
 
-![Grafo do núcleo do pytest desenhado pelo Grafo neon](docs/preview.jpg)
+![Animação do Grafo neon desenhando o werkzeug: o raio aparece de cima para baixo, troca de paleta e destaca os imports circulares em vermelho](docs/demo.gif)
 
 Cada fio é um import entre dois arquivos do projeto: quem importa fica em cima, o que é importado fica embaixo. O raio branco no meio é a **maior cadeia de imports** do projeto. Toque num rótulo para acender tudo o que aquele arquivo puxa e ver a lista do que ele importa e de quem o importa.
 
@@ -113,7 +115,7 @@ Tudo roda no navegador. Não existe servidor, e nada é enviado para lugar nenhu
 - Sem login, a API do GitHub permite **60 consultas por hora** por endereço IP, e cada repositório gasta 2.
 - O site lê até 1.500 arquivos de código e desenha até 600. Em repositórios enormes, aponte para uma pasta (`…/tree/main/src`).
 - Imports montados em tempo de execução (`importlib`, `require(variavel)`, rotas do Laravel em texto) não aparecem.
-- Em Kotlin e PHP, nomes curtos do mesmo pacote ou namespace são reconhecidos por texto, então pode haver alguma ligação a mais.
+- Em Go, Kotlin/Java, C# e PHP, nomes do mesmo pacote ou namespace são reconhecidos por texto, então pode haver alguma ligação a mais. Essas ligações são leves e não entram nos ciclos.
 
 ## Testes
 
