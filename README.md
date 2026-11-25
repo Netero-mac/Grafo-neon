@@ -45,12 +45,24 @@ O script só usa a biblioteca padrão do Python (3.8+) e gera uma página HTML �
 
 Só entram ligações **entre arquivos do próprio projeto**. Bibliotecas externas ficam de fora, e arquivos sem nenhuma ligação também.
 
+## Imports circulares
+
+Quando um grupo de arquivos se importa em círculo (A importa B, que importa C, que importa A), os fios desse grupo ficam **vermelhos**. O painel lista cada grupo com um ciclo de exemplo, e o botão **Destacar ciclos** apaga o resto do desenho.
+
+Só contam os imports que rodam no carregamento. Ficam de fora:
+
+- em Python, imports dentro de funções e dentro de `if TYPE_CHECKING:`;
+- em JS/TS, `import type` e `import()` dinâmico.
+
+Esses imports aparecem mais apagados no desenho. Em Python e JS, um ciclo pode quebrar a importação conforme a ordem em que os arquivos carregam. Em Kotlin, Java e PHP ele não dá erro, mas indica acoplamento forte.
+
 ## Como funciona
 
 1. **Lista de arquivos:** o site pede a árvore do repositório à API do GitHub (2 consultas). Se o limite estourar, ele usa o espelho do [jsDelivr](https://www.jsdelivr.com/).
 2. **Conteúdo:** baixa os arquivos de código do `raw.githubusercontent.com`, 10 de cada vez, e passa para o jsDelivr se o GitHub recusar.
 3. **Análise** (`analisador.js`): acha os imports de cada arquivo e os transforma em arestas `a → b` ("a importa b").
-4. **Desenho** (`render.js`):
+4. **Ciclos** (`grafo.js`): componentes fortemente conexos (Tarjan) e um ciclo curto de exemplo para cada grupo, achado com busca em largura.
+5. **Desenho** (`render.js`):
    - quebra os ciclos com uma busca em profundidade;
    - organiza os arquivos em camadas;
    - acha a maior cadeia e a desenha como um raio, com deslocamento de ponto médio;
@@ -72,6 +84,7 @@ Tudo roda no navegador. Não existe servidor, e nada é enviado para lugar nenhu
 index.html      página do site
 app.js          busca o repositório no GitHub e mostra o progresso
 analisador.js   acha os imports (Python, PHP, Kotlin/Java, JS/TS)
+grafo.js        algoritmos de grafo sem tela (ciclos), compartilhado com o script
 render.js       desenho neon em Canvas, compartilhado com o script
 estilo.css      estilos, compartilhados com o script
 exemplo.json    grafo de exemplo mostrado na abertura (núcleo do pytest)

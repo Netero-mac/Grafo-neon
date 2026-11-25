@@ -45,9 +45,16 @@ G.linguagem = function (caminho, semTestes) {
 };
 
 /* ------------------------------------------------------------ Python */
+/* Pasta a partir da qual o nome do módulo é contado. Uma pasta sem __init__.py abaixo de um
+   pacote ainda é subpacote (namespace), como flask/sansio. */
+function topoPy(dir, existe) {
+  let topo = dir;
+  for (let d = dir; d; d = dirname(d)) if (existe(d + '/__init__.py')) topo = dirname(d);
+  return topo;
+}
+
 function nomesPy(c, raiz, existe) {
-  let topo = dirname(c);
-  while (topo && existe(topo + '/__init__.py')) topo = dirname(topo);
+  const topo = topoPy(dirname(c), existe);
   const pont = base => {
     const ps = semExt(base ? c.slice(base.length + 1) : c).split('/');
     if (ps[ps.length - 1] === '__init__') ps.pop();
@@ -56,19 +63,43 @@ function nomesPy(c, raiz, existe) {
   return [pont(topo), pont(raiz)];
 }
 
+/* Marca as linhas "leves": dentro de def/lambda ou de `if TYPE_CHECKING:`.
+   Usa a indentação, pulando linhas de continuação (dentro de parênteses). */
+function linhasLevesPy(t) {
+  const linhas = t.split('\n'), leve = new Uint8Array(linhas.length), pilha = [];
+  let abertos = 0;
+  for (let k = 0; k < linhas.length; k++) {
+    const l = linhas[k], continua = abertos > 0;
+    for (const ch of l) { if (ch === '(' || ch === '[' || ch === '{') abertos++; else if ((ch === ')' || ch === ']' || ch === '}') && abertos > 0) abertos--; }
+    const m = l.match(/^([ \t]*)(\S.*)$/);
+    if (continua || !m) { leve[k] = pilha.length ? 1 : 0; continue; }
+    const ind = m[1].replace(/\t/g, '        ').length;
+    while (pilha.length && pilha[pilha.length - 1] >= ind) pilha.pop();
+    leve[k] = pilha.length ? 1 : 0;
+    if (/^(async\s+def|def|lambda)\b|^if\s+(?:\w+\.)?TYPE_CHECKING\s*:/.test(m[2])) pilha.push(ind);
+  }
+  return leve;
+}
+
 function importsPy(texto) {
-  const t = texto.replace(/("""|''')[\s\S]*?\1/g, '""').replace(/#[^\n]*/g, '');
+  const t = texto.replace(/("""|''')[\s\S]*?\1/g, '""')
+    .replace(/'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"/g, '""')
+    .replace(/#[^\n]*/g, '');
+  const leve = linhasLevesPy(t), quebras = [];
+  for (let k = t.indexOf('\n'); k >= 0; k = t.indexOf('\n', k + 1)) quebras.push(k);
+  const linhaDe = pos => { let lo = 0, hi = quebras.length; while (lo < hi) { const md = (lo + hi) >> 1; if (quebras[md] < pos) lo = md + 1; else hi = md; } return lo; };
   const res = [];
   for (const m of t.matchAll(/^[ \t]*import[ \t]+([^\n;]+)/gm)) {
+    const lv = !!leve[linhaDe(m.index)];
     for (const parte of m[1].split(',')) {
       const n = parte.trim().split(/\s+as\s+/)[0].trim();
-      if (/^[\w.]+$/.test(n)) res.push({ abs: n });
+      if (/^[\w.]+$/.test(n)) res.push({ abs: n, leve: lv });
     }
   }
   for (const m of t.matchAll(/^[ \t]*from[ \t]+(\.*)([\w.]*)[ \t]+import[ \t]+(\([^)]*\)|[^\n;]*)/gm)) {
     const nomes = m[3].replace(/[()\\]/g, ' ').split(',')
       .map(x => x.trim().split(/\s+as\s+/)[0].trim()).filter(x => /^(\w+|\*)$/.test(x));
-    res.push({ nivel: m[1].length, modulo: m[2], nomes });
+    res.push({ nivel: m[1].length, modulo: m[2], nomes, leve: !!leve[linhaDe(m.index)] });
   }
   return res;
 }
@@ -86,7 +117,7 @@ function analisarPython(itens, ctx, nos, ligar) {
       // dentro de um pacote (pasta com __init__.py) só vale o nome completo:
       // assim "import warnings" da biblioteca padrão não cai em _pytest/warnings.py
       const d = dirname(it.caminho);
-      if (prioridade === 1 && ctx.existe((d ? d + '/' : '') + '__init__.py')) continue;
+      if (prioridade === 1 && topoPy(d, ctx.existe) !== d) continue;
       const nome = nomesPy(it.caminho, ctx.raiz, ctx.existe)[prioridade];
       if (nome && !mapa.has(nome)) mapa.set(nome, it.i);
     }
@@ -103,7 +134,7 @@ function analisarPython(itens, ctx, nos, ligar) {
   for (const it of itens) {
     const [pkg, ehInit] = info.get(it.i);
     for (const imp of importsPy(it.texto)) {
-      if (imp.abs) { ligar(it.i, resolver(imp.abs)); continue; }
+      if (imp.abs) { ligar(it.i, resolver(imp.abs), imp.leve); continue; }
       let base;
       if (imp.nivel) {
         let b = ehInit ? pkg.split('.') : pkg.split('.').slice(0, -1);
@@ -113,7 +144,7 @@ function analisarPython(itens, ctx, nos, ligar) {
       for (const n of imp.nomes) {
         const cheio = base ? base + '.' + n : n;
         const alvo = mapa.get(cheio);
-        ligar(it.i, alvo !== undefined ? alvo : (base ? resolver(base) : undefined));
+        ligar(it.i, alvo !== undefined ? alvo : (base ? resolver(base) : undefined), imp.leve);
       }
     }
   }
@@ -212,6 +243,7 @@ function analisarJvm(itens, ctx, nos, ligar) {
 
 /* ------------------------------------------------------------ JS / TS */
 const RE_JS_IMP = /(?:import|export)\s+(?:[^'";]*?\s+from\s+)?['"]([^'"]+)['"]|require\(\s*['"]([^'"]+)['"]\s*\)|import\(\s*['"]([^'"]+)['"]\s*\)/g;
+const RE_JS_TIPO = /^(?:import|export)\s+type\b/;
 const EXT_JS = ['', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
 
 function analisarJs(itens, ctx, nos, ligar) {
@@ -226,6 +258,8 @@ function analisarJs(itens, ctx, nos, ligar) {
   for (const it of itens) {
     for (const m of it.texto.matchAll(RE_JS_IMP)) {
       const spec = m[1] || m[2] || m[3];
+      // "import type" (TypeScript) some na compilação; import() é carregado depois: os dois são leves
+      const leve = !!m[3] || RE_JS_TIPO.test(m[0]);
       let base;
       if (spec.startsWith('.')) base = normalizar(dirname(it.caminho) + '/' + spec);
       else if (spec.startsWith('@/') || spec.startsWith('~/')) base = normalizar((ctx.raiz ? ctx.raiz + '/' : '') + 'src/' + spec.slice(2));
@@ -234,7 +268,7 @@ function analisarJs(itens, ctx, nos, ligar) {
       const cand = EXT_JS.map(e => base + e).concat(EXT_JS.slice(1).map(e => base + '/index' + e));
       for (const c of cand) {
         const alvo = porCaminho.get(c);
-        if (alvo !== undefined) { ligar(it.i, alvo); break; }
+        if (alvo !== undefined) { ligar(it.i, alvo, leve); break; }
       }
     }
   }
@@ -275,11 +309,16 @@ G.analisar = function (arquivos, opcoes) {
     nos.push({ caminho: a.caminho, ling, partes: [semExt(basename(a.caminho))], sep: '/' });
     if (ling) (porLing[ling] = porLing[ling] || []).push({ i, caminho: a.caminho, texto: a.texto || '' });
   });
-  const arestas = new Set();
-  const ligar = (a, b) => { if (b !== undefined && b !== null && a !== b) arestas.add(a * 1e6 + b); };
+  // chave a*1e6+b → leve? (um import de carregamento vence um leve)
+  const arestas = new Map();
+  const ligar = (a, b, leve) => {
+    if (b === undefined || b === null || a === b) return;
+    const k = a * 1e6 + b, atual = arestas.get(k);
+    arestas.set(k, atual === undefined ? !!leve : atual && !!leve);
+  };
   for (const ling of Object.keys(porLing)) ANALISADORES[ling](porLing[ling], ctx, nos, ligar);
 
-  const pares = [...arestas].map(x => [Math.floor(x / 1e6), x % 1e6]);
+  const pares = [...arestas].map(([x, leve]) => [Math.floor(x / 1e6), x % 1e6, leve]);
   const grau = new Map();
   for (const [a, b] of pares) { grau.set(a, (grau.get(a) || 0) + 1); grau.set(b, (grau.get(b) || 0) + 1); }
   let manter = [...grau.keys()];
@@ -295,7 +334,8 @@ G.analisar = function (arquivos, opcoes) {
   const nosF = manter.map(i => nos[i]);
   const rotulos = nomesCurtos(nosF);
   const arestasF = pares.filter(([a, b]) => novo.has(a) && novo.has(b))
-    .map(([a, b]) => [novo.get(a), novo.get(b)]).sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+    .map(([a, b, leve]) => (leve ? [novo.get(a), novo.get(b), 1] : [novo.get(a), novo.get(b)]))
+    .sort((x, y) => x[0] - y[0] || x[1] - y[1]);
   const contLing = {};
   for (const n of nosF) contLing[NOME_LING[n.ling]] = (contLing[NOME_LING[n.ling]] || 0) + 1;
   return {

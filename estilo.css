@@ -3,7 +3,7 @@
    PICTURE: o grafo inteiro em Canvas, tronco de raio no meio, rótulos nas margens
    COLOUR and TYPE: preto, lavanda #a77bd6, magenta #ff5cf4, branco quente; JetBrains Mono
    LAYOUT: campo do link no topo, o desenho na largura toda, depois a ficha do arquivo escolhido */
-:root{color-scheme:dark;--bg:#000;--ink:#efe8f6;--dim:#a397b5;--lav:#a77bd6;--mag:#ff5cf4;--linha:#3a2d4a;--campo:#0d0912}
+:root{color-scheme:dark;--alerta:#ff5c7a;--bg:#000;--ink:#efe8f6;--dim:#a397b5;--lav:#a77bd6;--mag:#ff5cf4;--linha:#3a2d4a;--campo:#0d0912}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;overflow-x:clip}
 a{color:var(--lav)}
@@ -57,5 +57,16 @@ button:disabled{opacity:.55;cursor:progress}
 .chip{min-height:34px;font-size:13px;padding:0 10px;border-radius:8px;background:#160d20;border-color:var(--linha)}
 .vazio{font-size:13px;color:#7d7190}
 .nota{color:var(--dim);font-size:13px;margin:20px 0 0}
+.ciclos{margin:0 0 22px;padding:14px 16px;border:1px solid #4a2232;border-left:3px solid var(--alerta);border-radius:10px;background:#0d0609}
+.ciclos h3{font-size:15px;margin:0 0 6px;color:var(--alerta);font-weight:600}
+.ciclos p{margin:0 0 8px;font-size:14px;color:#e6d6dc;max-width:70ch}
+.ciclos ol{margin:0 0 10px;padding-left:1.2em;font-size:13px;color:var(--dim)}
+.ciclos li{margin:6px 0;line-height:2}
+.ciclos li b{color:var(--ink);font-weight:600}
+.chip.mini{min-height:30px;font-size:12px;padding:0 8px;vertical-align:middle}
+.seta{color:var(--alerta)}
+.fciclo{margin:0 0 12px;font-size:13px;color:#ffb3c1;line-height:2}
+#btnCiclos{border-color:#7a2a40;background:#1d0a12}
+#btnCiclos[aria-pressed=true]{background:#3a0f1f;border-color:var(--alerta)}
 [hidden]{display:none!important}
 @media (prefers-reduced-motion:reduce){.barra i{transition:none}}

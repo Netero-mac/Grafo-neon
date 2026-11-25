@@ -38,8 +38,14 @@
   <section class="painel">
     <h2 class="titulo" id="titulo"></h2>
     <p class="meta"><span id="meta"></span> <a id="origem" href="#" target="_blank" rel="noopener" hidden>ver no GitHub ↗</a></p>
-    <p class="leg">Cada fio é um import entre dois arquivos do projeto: quem importa fica acima, o que é importado fica abaixo. O raio branco é a maior cadeia de dependências.</p>
+    <p class="leg">Cada fio é um import entre dois arquivos do projeto: quem importa fica acima, o que é importado fica abaixo. O raio branco é a maior cadeia de dependências. Fios vermelhos são imports circulares.</p>
     <p class="cadeia" id="cadeia"></p>
+    <section class="ciclos" id="ciclos" aria-labelledby="ciclosTitulo">
+      <h3 id="ciclosTitulo">Imports circulares</h3>
+      <p id="ciclosResumo"></p>
+      <ol id="ciclosLista"></ol>
+      <button type="button" id="btnCiclos" aria-pressed="false" hidden>Destacar ciclos</button>
+    </section>
     <form id="formBusca" autocomplete="off">
       <input id="busca" list="lista" placeholder="Buscar arquivo…" aria-label="Buscar arquivo no grafo">
       <datalist id="lista"></datalist>
@@ -50,6 +56,7 @@
       <h3 id="fNome"></h3>
       <p class="cam" id="fCam"></p>
       <p class="num" id="fNum"></p>
+      <p class="fciclo" id="fCiclo" hidden></p>
       <h4>Importa</h4><div class="chips" id="fDeps"></div>
       <h4>É importado por</h4><div class="chips" id="fUsos"></div>
     </div>
@@ -57,6 +64,7 @@
   </section>
 </main>
 <script src="analisador.js"></script>
+<script src="grafo.js"></script>
 <script src="render.js"></script>
 <script src="app.js"></script>
 </body>

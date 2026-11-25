@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import functools
 import html
 import json
 import os
@@ -80,13 +81,61 @@ def ler(caminho: Path) -> str:
         return ""
 
 
+# ---------------------------------------------------------------- arestas
+
+def ligar(arestas: dict, a: int, b, leve: bool = False) -> None:
+    """Registra "a importa b". leve=True: import que não roda no carregamento
+    (só de tipo, dentro de função, ou dinâmico). Um import de carregamento vence um leve."""
+    if b is None or a == b:
+        return
+    atual = arestas.get((a, b))
+    arestas[(a, b)] = leve if atual is None else (atual and leve)
+
+
 # ---------------------------------------------------------------- Python
 
+def imports_py(arvore):
+    """Percorre a árvore e devolve (nó de import, leve). Leve quando o import fica dentro
+    de uma função/lambda ou de um bloco `if TYPE_CHECKING:`; esses não rodam ao importar o módulo."""
+    def eh_type_checking(teste):
+        return ((isinstance(teste, ast.Name) and teste.id == "TYPE_CHECKING")
+                or (isinstance(teste, ast.Attribute) and teste.attr == "TYPE_CHECKING"))
+
+    pilha = [(arvore, False)]
+    while pilha:
+        no, leve = pilha.pop()
+        if isinstance(no, (ast.Import, ast.ImportFrom)):
+            yield no, leve
+        elif isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            pilha.extend((f, True) for f in ast.iter_child_nodes(no))
+        elif isinstance(no, ast.If) and eh_type_checking(no.test):
+            pilha.extend((f, True) for f in no.body)
+            pilha.extend((f, leve) for f in no.orelse)
+        else:
+            pilha.extend((f, leve) for f in ast.iter_child_nodes(no))
+
+
+@functools.lru_cache(maxsize=None)
+def topo_pacote(pasta: Path, raiz: Path) -> Path:
+    """Pasta a partir da qual o nome do módulo é contado. Dentro da raiz, uma pasta sem __init__.py
+    abaixo de um pacote ainda é subpacote (namespace), como flask/sansio. Acima da raiz, só sobe
+    enquanto houver __init__.py."""
+    topo, d = pasta, pasta
+    while True:
+        if (d / "__init__.py").exists():
+            topo = d.parent
+        if d == raiz or d.parent == d:
+            break
+        d = d.parent
+    if topo == raiz.parent:
+        while (topo / "__init__.py").exists() and topo.parent != topo:
+            topo = topo.parent
+    return topo
+
+
 def nomes_modulo_py(arq: Path, raiz: Path) -> tuple[str, str]:
-    """Nome pontilhado do módulo: (seguindo os __init__.py, relativo à raiz)."""
-    topo = arq.parent
-    while (topo / "__init__.py").exists() and topo.parent != topo:
-        topo = topo.parent
+    """Nome pontilhado do módulo: (pelo pacote, relativo à raiz)."""
+    topo = topo_pacote(arq.parent, raiz)
 
     def pontilhado(base: Path) -> str:
         partes = list(arq.relative_to(base).with_suffix("").parts)
@@ -108,7 +157,7 @@ def analisar_python(itens, raiz, nos, arestas):
         for i, arq, _ in itens:
             # dentro de um pacote (pasta com __init__.py) só vale o nome completo:
             # assim "import warnings" da biblioteca padrão não cai em _pytest/warnings.py
-            if prioridade == 1 and (arq.parent / "__init__.py").exists():
+            if prioridade == 1 and topo_pacote(arq.parent, raiz) != arq.parent:
                 continue
             nome = nomes_modulo_py(arq, raiz)[prioridade]
             if nome and nome not in mapa:
@@ -129,7 +178,7 @@ def analisar_python(itens, raiz, nos, arestas):
         except (SyntaxError, ValueError):
             continue
         pkg, eh_init = info[i]
-        for no in ast.walk(arvore):
+        for no, leve in imports_py(arvore):
             alvos = []
             if isinstance(no, ast.Import):
                 alvos = [resolver(a.name) for a in no.names]
@@ -137,7 +186,7 @@ def analisar_python(itens, raiz, nos, arestas):
                 if no.level:
                     base = pkg.split(".") if eh_init else pkg.split(".")[:-1]
                     if no.level > 1:
-                        base = base[: len(base) - (no.level - 1)]
+                        base = base[: max(0, len(base) - (no.level - 1))]
                     base = ".".join(base + (no.module.split(".") if no.module else []))
                 else:
                     base = no.module or ""
@@ -146,8 +195,7 @@ def analisar_python(itens, raiz, nos, arestas):
                     alvo = mapa.get(cheio)
                     alvos.append(alvo if alvo is not None else (resolver(base) if base else None))
             for alvo in alvos:
-                if alvo is not None and alvo != i:
-                    arestas.add((i, alvo))
+                ligar(arestas, i, alvo, leve)
 
 
 # ---------------------------------------------------------------- PHP
@@ -180,9 +228,8 @@ def analisar_php(itens, raiz, nos, arestas):
     for i, arq, texto in itens:
         ns, apelidos = ns_de[i], {}
 
-        def ligar(alvo):
-            if alvo is not None and alvo != i:
-                arestas.add((i, alvo))
+        def liga(alvo):
+            ligar(arestas, i, alvo)
 
         for m in RE_PHP_USE.finditer(texto):
             trecho = re.sub(r"^(function|const)\s+", "", m.group(1).strip())
@@ -201,11 +248,11 @@ def analisar_php(itens, raiz, nos, arestas):
                     apelidos[apelido] = alvo
                 else:  # "use Trait;" dentro da classe
                     alvo = apelidos.get(fq, curto.get((ns, fq)))
-                ligar(alvo)
+                liga(alvo)
         for m in RE_PHP_FQ.finditer(texto):
-            ligar(fq_map.get(m.group(1)))
+            liga(fq_map.get(m.group(1)))
         for nome in set(RE_MAIUSC.findall(texto)):
-            ligar(curto.get((ns, nome)))
+            liga(curto.get((ns, nome)))
 
 
 # ---------------------------------------------------------------- Kotlin / Java
@@ -252,19 +299,16 @@ def analisar_jvm(itens, raiz, nos, arestas):
             while partes:
                 alvo = fq_map.get(".".join(partes))
                 if alvo is not None:
-                    if alvo != i:
-                        arestas.add((i, alvo))
+                    ligar(arestas, i, alvo)
                     break
                 partes.pop()
         limpo = RE_COMENTARIO.sub(" ", texto)
         for fq in set(RE_JVM_FQ.findall(limpo)):
             alvo = fq_map.get(fq)
-            if alvo is not None and alvo != i:
-                arestas.add((i, alvo))
+            ligar(arestas, i, alvo)
         for nome in set(RE_IDENT.findall(limpo)):
             alvo = curto.get((pkg, nome))
-            if alvo is not None and alvo != i:
-                arestas.add((i, alvo))
+            ligar(arestas, i, alvo)
 
 
 # ---------------------------------------------------------------- JS / TS
@@ -273,6 +317,7 @@ RE_JS_IMP = re.compile(
     r"""(?:import|export)\s+(?:[^'";]*?\s+from\s+)?['"]([^'"]+)['"]"""
     r"""|require\(\s*['"]([^'"]+)['"]\s*\)|import\(\s*['"]([^'"]+)['"]\s*\)"""
 )
+RE_JS_TIPO = re.compile(r"(?:import|export)\s+type\b")
 EXT_JS = ["", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]
 
 
@@ -289,6 +334,8 @@ def analisar_js(itens, raiz, nos, arestas):
     for i, arq, texto in itens:
         for m in RE_JS_IMP.finditer(texto):
             spec = next(g for g in m.groups() if g)
+            # "import type" (TypeScript) some na compilação; import() é carregado depois: os dois são leves
+            leve = bool(m.group(3)) or bool(RE_JS_TIPO.match(m.group(0)))
             if spec.startswith("."):
                 base = arq.parent / spec
             elif spec.startswith(("@/", "~/")):
@@ -300,8 +347,7 @@ def analisar_js(itens, raiz, nos, arestas):
             for c in candidatos:
                 alvo = por_caminho.get(c)
                 if alvo is not None:
-                    if alvo != i:
-                        arestas.add((i, alvo))
+                    ligar(arestas, i, alvo, leve)
                     break
 
 
@@ -335,7 +381,7 @@ def montar_grafo(raiz: Path, sem_testes: bool, max_nos: int, titulo: str | None)
     arquivos = coletar(raiz, sem_testes)
     nos = [{"caminho": a.relative_to(raiz).as_posix(), "ling": l, "partes": [a.stem], "sep": "/"}
            for a, l in arquivos]
-    arestas: set[tuple[int, int]] = set()
+    arestas: dict[tuple[int, int], bool] = {}
     por_ling: dict[str, list] = {}
     for i, (arq, ling) in enumerate(arquivos):
         por_ling.setdefault(ling, []).append((i, arq, ler(arq)))
@@ -360,12 +406,12 @@ def montar_grafo(raiz: Path, sem_testes: bool, max_nos: int, titulo: str | None)
     novo = {velho: j for j, velho in enumerate(manter)}
     nos_f = [nos[i] for i in manter]
     rotulos = nomes_curtos(nos_f)
-    arestas_f = sorted((novo[a], novo[b]) for a, b in arestas if a in novo and b in novo)
+    arestas_f = sorted((novo[a], novo[b], leve) for (a, b), leve in arestas.items() if a in novo and b in novo)
 
     return {
         "titulo": titulo or raiz.resolve().name,
         "nos": [{"n": r, "c": n["caminho"], "l": n["ling"]} for r, n in zip(rotulos, nos_f)],
-        "arestas": [list(e) for e in arestas_f],
+        "arestas": [[a, b, 1] if leve else [a, b] for a, b, leve in arestas_f],
         "ling": {NOME_LING[l]: c for l, c in Counter(n["ling"] for n in nos_f).most_common()},
         "lidos": len(arquivos),
     }
@@ -417,8 +463,14 @@ MODELO_HTML = r"""<!DOCTYPE html>
   <section class="painel">
     <h1 class="titulo" id="titulo"></h1>
     <p class="meta"><span id="meta"></span> <a id="origem" href="#" target="_blank" rel="noopener" hidden>ver no GitHub ↗</a></p>
-    <p class="leg">Cada fio é um import entre dois arquivos do projeto: quem importa fica acima, o que é importado fica abaixo. O raio branco é a maior cadeia de dependências.</p>
+    <p class="leg">Cada fio é um import entre dois arquivos do projeto: quem importa fica acima, o que é importado fica abaixo. O raio branco é a maior cadeia de dependências. Fios vermelhos são imports circulares.</p>
     <p class="cadeia" id="cadeia"></p>
+    <section class="ciclos" id="ciclos" aria-labelledby="ciclosTitulo">
+      <h3 id="ciclosTitulo">Imports circulares</h3>
+      <p id="ciclosResumo"></p>
+      <ol id="ciclosLista"></ol>
+      <button type="button" id="btnCiclos" aria-pressed="false" hidden>Destacar ciclos</button>
+    </section>
     <form id="formBusca" autocomplete="off">
       <input id="busca" list="lista" placeholder="Buscar arquivo…" aria-label="Buscar arquivo no grafo">
       <datalist id="lista"></datalist>
@@ -429,12 +481,16 @@ MODELO_HTML = r"""<!DOCTYPE html>
       <h3 id="fNome"></h3>
       <p class="cam" id="fCam"></p>
       <p class="num" id="fNum"></p>
+      <p class="fciclo" id="fCiclo" hidden></p>
       <h4>Importa</h4><div class="chips" id="fDeps"></div>
       <h4>É importado por</h4><div class="chips" id="fUsos"></div>
     </div>
     <p class="nota">Toque num rótulo ou perto de um fio para acender o que aquele arquivo puxa. Gerado por grafo_neon.py.</p>
   </section>
 </main>
+<script>
+/*__GRAFO__*/
+</script>
 <script>
 /*__RENDER__*/
 </script>
@@ -448,12 +504,14 @@ def gerar_html(dados: dict) -> str:
     try:
         css = (PASTA / "estilo.css").read_text(encoding="utf-8")
         render = (PASTA / "render.js").read_text(encoding="utf-8")
+        grafo = (PASTA / "grafo.js").read_text(encoding="utf-8")
     except OSError:
-        sys.exit("Não achei estilo.css e render.js ao lado do grafo_neon.py. Baixe o repositório inteiro.")
+        sys.exit("Não achei estilo.css, grafo.js e render.js ao lado do grafo_neon.py. Baixe o repositório inteiro.")
     js = json.dumps(dados, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     return (MODELO_HTML
             .replace("__TITULO__", html.escape(dados["titulo"]))
             .replace("/*__CSS__*/", css)
+            .replace("/*__GRAFO__*/", grafo.replace("</script", "<\\/script"))
             .replace("/*__RENDER__*/", render.replace("</script", "<\\/script"))
             .replace("/*__DADOS__*/null", js))
 

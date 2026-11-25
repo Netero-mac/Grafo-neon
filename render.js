@@ -104,6 +104,28 @@ G.montar = function (D) {
     if (m < Infinity) L[i] = Math.max(0, m - 1);
   }
   const nL = Math.max(2, tronco.length);
+
+  // imports circulares (só os que rodam no carregamento)
+  const cic = G.ciclos(N, A), tamComp = new Int32Array(N);
+  for (let i = 0; i < N; i++) tamComp[cic.comp[i]]++;
+  const cicloE = new Uint8Array(E);
+  for (let e = 0; e < E; e++) { const [a, b, leve] = A[e]; if (!leve && cic.comp[a] === cic.comp[b] && tamComp[cic.comp[a]] > 1) cicloE[e] = 1; }
+  const grupoDe = new Map();
+  cic.grupos.forEach(gr => { for (const i of gr.nos) grupoDe.set(i, gr); });
+  let modoCiclos = false;
+  const nomeBtn = i => '<button type="button" class="chip mini" data-i="' + i + '">' + esc(D.nos[i].n) + '</button>';
+  const secC = $('ciclos');
+  if (secC) {
+    const tot = cic.grupos.reduce((s, gr) => s + gr.nos.length, 0);
+    $('ciclosResumo').textContent = cic.grupos.length
+      ? cic.grupos.length + (cic.grupos.length > 1 ? ' grupos de arquivos se importam' : ' grupo de arquivos se importa') + ' em círculo (' + tot + ' arquivos, fios vermelhos). Em Python e JS isso pode quebrar a importação conforme a ordem; em qualquer linguagem, indica acoplamento forte.'
+      : 'Nenhum import circular: nenhum grupo de arquivos se importa em círculo no carregamento.';
+    $('ciclosLista').innerHTML = cic.grupos.slice(0, 6).map(gr =>
+      '<li><b>' + gr.nos.length + ' arquivos:</b> ' + gr.caminho.map(nomeBtn).join(' <span class="seta">→</span> ') + '</li>').join('') +
+      (cic.grupos.length > 6 ? '<li class="vazio">e mais ' + (cic.grupos.length - 6) + ' grupos</li>' : '');
+    const bc = $('btnCiclos');
+    bc.hidden = !cic.grupos.length; bc.setAttribute('aria-pressed', 'false'); bc.textContent = 'Destacar ciclos';
+  }
   $('cadeia').innerHTML = '<b>Maior cadeia (' + tronco.length + ' arquivos):</b> ' + tronco.map(i => esc(D.nos[i].n)).join(' → ');
   $('lista').innerHTML = D.nos.map(n => '<option value="' + esc(n.n) + '">').join('');
 
@@ -188,7 +210,7 @@ G.montar = function (D) {
     }
     g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
     gb.clearRect(0, 0, W, H);
-    const alfa = e => (foco && !foco.ar[e] ? 0.22 : 1);
+    const alfa = e => (foco ? (foco.ar[e] ? 1 : 0.22) : modoCiclos ? (cicloE[e] ? 1 : 0.12) : 1);
 
     // poeira de fundo
     const nb = Math.round(170 * W * H / (850 * 1100));
@@ -259,7 +281,7 @@ G.montar = function (D) {
     for (let e = 0; e < E; e++) { g.globalAlpha = alfa(e); curva(e * F * 8); }
     g.strokeStyle = 'rgba(150,104,212,0.34)'; g.lineWidth = Math.max(4, 9 * s);
     for (const gc of ganchos) {
-      g.globalAlpha = foco && !foco.desc.has(gc[0]) ? 0.22 : 1;
+      g.globalAlpha = foco ? (foco.desc.has(gc[0]) ? 1 : 0.22) : modoCiclos ? 0.15 : 1;
       g.beginPath(); g.moveTo(gc[1], gc[2]); g.bezierCurveTo(gc[3], gc[4], gc[5], gc[6], gc[7], gc[8]); g.stroke();
     }
     g.globalAlpha = 1;
@@ -271,17 +293,28 @@ G.montar = function (D) {
     g.strokeStyle = 'rgba(175,105,230,0.07)'; g.lineWidth = Math.max(2, 4 * s);
     for (let e = 0; e < E; e++) { g.globalAlpha = alfa(e); for (let f = 0; f < F; f++) curva((e * F + f) * 8); }
     g.strokeStyle = 'rgba(226,112,255,0.5)'; g.lineWidth = Math.max(0.6, 1.0 * s);
-    for (let e = 0; e < E; e++) { g.globalAlpha = alfa(e); for (let f = 0; f < F; f++) curva((e * F + f) * 8); }
+    for (let e = 0; e < E; e++) { g.globalAlpha = alfa(e) * (A[e][2] ? 0.55 : 1); for (let f = 0; f < F; f++) curva((e * F + f) * 8); }
     g.globalCompositeOperation = 'lighter';
     g.strokeStyle = 'rgba(255,150,255,0.035)'; g.lineWidth = Math.max(0.6, 1.0 * s);
     for (let e = 0; e < E; e++) { g.globalAlpha = alfa(e); for (let f = 0; f < F; f++) curva((e * F + f) * 8); }
     g.globalCompositeOperation = 'source-over';
     g.strokeStyle = 'rgba(210,165,245,0.6)'; g.lineWidth = 0.7;
     for (const [dono, pts] of pelos) {
-      g.globalAlpha = foco ? (dono >= 0 ? (foco.desc.has(dono) ? 1 : 0.2) : (foco.ar[-1 - dono] ? 1 : 0.2)) : 1;
+      g.globalAlpha = foco ? (dono >= 0 ? (foco.desc.has(dono) ? 1 : 0.2) : (foco.ar[-1 - dono] ? 1 : 0.2)) : modoCiclos ? 0.15 : 1;
       linha(g, pts);
     }
     g.globalAlpha = 1;
+
+    // imports circulares em vermelho
+    if (cic.grupos.length) {
+      // traço escuro embaixo e vermelho por cima, sem soma de luz, para não virar rosa no meio do roxo
+      for (const [cor, larg, sombra] of [['rgba(20,0,8,0.55)', 3.2, 0], ['#ff3b5c', modoCiclos ? 1.8 : 1.3, modoCiclos ? 10 : 6]]) {
+        g.strokeStyle = cor; g.lineWidth = Math.max(0.9, larg * s);
+        g.shadowColor = '#ff2d55'; g.shadowBlur = sombra;
+        for (let e = 0; e < E; e++) if (cicloE[e]) { g.globalAlpha = foco && !foco.ar[e] ? 0.25 : 1; curva(e * F * 8); }
+      }
+      g.shadowBlur = 0; g.globalAlpha = 1;
+    }
 
     // 4) tronco em raio
     const base0 = tronco.map(i => [PX[i], PY[i]]);
@@ -322,7 +355,7 @@ G.montar = function (D) {
         forks.push(raio([p, [p[0] + Math.cos(ang) * l, p[1] + Math.sin(ang) * l]], 0.6, 2));
       }
     }
-    const aT = foco && !tronco.some(i => foco.desc.has(i)) ? 0.35 : 1;
+    const aT = foco ? (tronco.some(i => foco.desc.has(i)) ? 1 : 0.35) : modoCiclos ? 0.12 : 1;
     for (const c of [g, gb]) {
       c.globalCompositeOperation = 'lighter';
       c.globalAlpha = c === g ? aT : 1;
@@ -362,6 +395,8 @@ G.montar = function (D) {
     if (foco) {
       const viz = [...out[sel], ...inn[sel]].sort((a, b) => grau(b) - grau(a));
       lista = [sel, ...viz.filter((v, k) => viz.indexOf(v) === k && v !== sel)].slice(0, max);
+    } else if (modoCiclos) {
+      lista = [...grupoDe.keys()].sort((a, b) => grau(b) - grau(a)).slice(0, max);
     } else {
       const fixos = [...new Set([raiz, tronco[tronco.length - 1]])];
       const resto = [...Array(N).keys()].filter(i => !fixos.includes(i)).sort((a, b) => grau(b) - grau(a));
@@ -391,7 +426,7 @@ G.montar = function (D) {
         g.fillStyle = 'rgba(255,255,255,0.85)';
         g.beginPath(); g.arc(PX[r.i], PY[r.i], 1.6, 0, 6.2832); g.fill();
         g.lineWidth = 3.5; g.strokeStyle = 'rgba(0,0,0,0.85)'; g.strokeText(t, tx, r.ly);
-        g.fillStyle = r.i === sel ? '#ff8cf7' : '#efe8f6'; g.fillText(t, tx, r.ly);
+        g.fillStyle = r.i === sel ? '#ff8cf7' : modoCiclos ? '#ff9db0' : '#efe8f6'; g.fillText(t, tx, r.ly);
         rotulos.push({ i: r.i, x0: tx - 8, x1: tx + tw + 8, y0: r.ly - gap / 2, y1: r.ly + gap / 2 });
       }
     });
@@ -438,6 +473,7 @@ G.montar = function (D) {
   /* ---------- interação ---------- */
   function selecionar(i) {
     sel = i; foco = i >= 0 ? calcFoco(i) : null;
+    if (i >= 0 && modoCiclos) { modoCiclos = false; const bc = $('btnCiclos'); bc.setAttribute('aria-pressed', 'false'); bc.textContent = 'Destacar ciclos'; }
     desenhar(); mostrar(false);
     $('limpar').hidden = i < 0;
     const f = $('ficha');
@@ -453,6 +489,12 @@ G.montar = function (D) {
       cam.appendChild(a);
     } else cam.textContent = no.c;
     $('fNum').textContent = 'importa ' + out[i].length + ' direto · puxa ' + (foco.desc.size - 1) + ' no total · usado por ' + inn[i].length;
+    const fc = $('fCiclo');
+    if (fc) {
+      const gr = grupoDe.get(i);
+      fc.hidden = !gr;
+      if (gr) fc.innerHTML = 'Está num ciclo de ' + gr.nos.length + ' arquivos: ' + gr.caminho.map(nomeBtn).join(' <span class="seta">→</span> ');
+    }
     const chips = ids => ids.slice().sort((a, b) => grau(b) - grau(a))
       .map(k => '<button type="button" class="chip" data-i="' + k + '">' + esc(D.nos[k].n) + '</button>').join('')
       || '<span class="vazio">nenhum</span>';
@@ -468,6 +510,18 @@ G.montar = function (D) {
   });
   on($('ficha'), 'click', ev => { const b = ev.target.closest('.chip'); if (b) selecionar(+b.dataset.i); });
   on($('limpar'), 'click', () => selecionar(-1));
+  if (secC) {
+    on(secC, 'click', ev => {
+      const b = ev.target.closest('.chip');
+      if (b) { selecionar(+b.dataset.i); fig.scrollIntoView({ behavior: reduz ? 'auto' : 'smooth', block: 'start' }); return; }
+      if (ev.target.closest('#btnCiclos')) {
+        modoCiclos = !modoCiclos;
+        const bc = $('btnCiclos');
+        bc.setAttribute('aria-pressed', String(modoCiclos)); bc.textContent = modoCiclos ? 'Mostrar tudo' : 'Destacar ciclos';
+        if (modoCiclos) { selecionar(-1); fig.scrollIntoView({ behavior: reduz ? 'auto' : 'smooth', block: 'start' }); } else { desenhar(); mostrar(false); }
+      }
+    });
+  }
   on($('semente'), 'click', () => { semente = 1 + Math.floor(Math.random() * 1e6); posicionar(); desenhar(); mostrar(true); });
   const buscar = () => {
     const v = $('busca').value.trim().toLowerCase();
