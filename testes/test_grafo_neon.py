@@ -85,6 +85,17 @@ class TestParidadeComOSite(unittest.TestCase):
                 self.assertEqual(texto(js), texto(py))
                 self.assertEqual(sorted((n["c"], n["n"]) for n in js["nos"]), sorted((n["c"], n["n"]) for n in py["nos"]))
 
+    def test_mesmo_corte_quando_passa_do_limite(self):
+        # com empate de grau, os dois precisam cortar os mesmos arquivos
+        for nome in PROJETOS:
+            for limite in (2, 3, 4):
+                with self.subTest(projeto=nome, limite=limite):
+                    r = subprocess.run(["node", str(RAIZ / "testes" / "ferramentas" / "analisar.js"), str(FIXTURES / nome),
+                                        "--max-nos", str(limite)], capture_output=True, text=True, check=True)
+                    js = json.loads(r.stdout)
+                    py = grafo_neon.montar_grafo(FIXTURES / nome, False, limite, None)
+                    self.assertEqual(texto(js), texto(py))
+
 
 if __name__ == "__main__":
     unittest.main()

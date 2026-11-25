@@ -1,5 +1,5 @@
 {
-  "_sobre": "Imports esperados em cada projeto de testes/fixtures, escritos à mão. '(leve)' = import que não roda no carregamento.",
+  "_sobre": "Imports esperados em cada projeto de testes/fixtures, escritos à mão. '(leve)' = ligação que não é um import de carregamento: import só de tipo, dentro de função ou dinâmico, referência implícita dentro do mesmo pacote/namespace, ou declaração 'mod' do Rust. Leves não contam para ciclos.",
   "python": {
     "arestas": [
       "app/__init__.py -> app/nucleo.py",
@@ -25,10 +25,10 @@
   },
   "php": {
     "arestas": [
-      "app/Http/Controllers/ProdutoController.php -> app/Http/Controllers/Controller.php",
+      "app/Http/Controllers/ProdutoController.php -> app/Http/Controllers/Controller.php (leve)",
       "app/Http/Controllers/ProdutoController.php -> app/Models/Produto.php",
       "app/Http/Controllers/ProdutoController.php -> app/Services/Orcamento.php",
-      "app/Models/Produto.php -> app/Models/Categoria.php",
+      "app/Models/Produto.php -> app/Models/Categoria.php (leve)",
       "app/Models/Produto.php -> app/Models/HasPreco.php",
       "app/Services/Orcamento.php -> app/Models/Categoria.php",
       "app/Services/Orcamento.php -> app/Models/Produto.php",
@@ -39,14 +39,14 @@
   },
   "kotlin": {
     "arestas": [
-      "app/src/main/java/com/marco/caderno/HomeScreen.kt -> app/src/main/java/com/marco/caderno/Util.kt",
+      "app/src/main/java/com/marco/caderno/HomeScreen.kt -> app/src/main/java/com/marco/caderno/Util.kt (leve)",
       "app/src/main/java/com/marco/caderno/HomeScreen.kt -> app/src/main/java/com/marco/caderno/data/Compra.kt",
       "app/src/main/java/com/marco/caderno/HomeScreen.kt -> app/src/main/java/com/marco/caderno/data/Repositorio.java",
-      "app/src/main/java/com/marco/caderno/MainActivity.kt -> app/src/main/java/com/marco/caderno/HomeScreen.kt",
+      "app/src/main/java/com/marco/caderno/MainActivity.kt -> app/src/main/java/com/marco/caderno/HomeScreen.kt (leve)",
       "app/src/main/java/com/marco/caderno/MainActivity.kt -> app/src/main/java/com/marco/caderno/data/Repositorio.java",
       "app/src/main/java/com/marco/caderno/MainActivity.kt -> app/src/main/java/com/marco/caderno/ui/theme/Theme.kt",
-      "app/src/main/java/com/marco/caderno/data/Repositorio.java -> app/src/main/java/com/marco/caderno/data/Compra.kt",
-      "app/src/main/java/com/marco/caderno/ui/theme/Theme.kt -> app/src/main/java/com/marco/caderno/ui/theme/Color.kt"
+      "app/src/main/java/com/marco/caderno/data/Repositorio.java -> app/src/main/java/com/marco/caderno/data/Compra.kt (leve)",
+      "app/src/main/java/com/marco/caderno/ui/theme/Theme.kt -> app/src/main/java/com/marco/caderno/ui/theme/Color.kt (leve)"
     ],
     "ciclos": [],
     "soltos": []
@@ -68,6 +68,75 @@
         "src/util/index.ts"
       ]
     ],
+    "soltos": []
+  },
+  "dart": {
+    "arestas": [
+      "lib/app.dart -> lib/modelos/item.dart",
+      "lib/app.dart -> lib/telas/home.dart (leve)",
+      "lib/main.dart -> lib/app.dart",
+      "lib/main.dart -> lib/telas/home.dart",
+      "lib/telas/home.dart -> lib/modelos/item.dart",
+      "lib/telas/home.dart -> lib/telas/home.g.dart"
+    ],
+    "ciclos": [],
+    "soltos": []
+  },
+  "go": {
+    "arestas": [
+      "internal/estoque/estoque.go -> internal/banco/banco.go",
+      "internal/estoque/estoque.go -> internal/estoque/dados.go (leve)",
+      "internal/estoque/estoque_test.go -> internal/estoque/estoque.go (leve)",
+      "main.go -> internal/banco/banco.go",
+      "main.go -> internal/estoque/dados.go",
+      "main.go -> internal/estoque/estoque.go",
+      "main.go -> util.go (leve)",
+      "usa_estoque.go -> internal/estoque/dados.go",
+      "usa_estoque.go -> internal/estoque/estoque.go"
+    ],
+    "ciclos": [],
+    "soltos": []
+  },
+  "c": {
+    "arestas": [
+      "src/main.c -> src/rede/socket.h",
+      "src/main.c -> src/util.h",
+      "src/rede/socket.c -> src/rede/socket.h",
+      "src/rede/socket.c -> src/util.h",
+      "src/rede/socket.h -> include/projeto/config.h",
+      "src/util.c -> src/util.h"
+    ],
+    "ciclos": [],
+    "soltos": [
+      "src/vazio.c"
+    ]
+  },
+  "csharp": {
+    "arestas": [
+      "Program.cs -> Servicos/Carrinho.cs",
+      "Program.cs -> Util/Formatador.cs (leve)",
+      "Relatorio.cs -> Modelos/Produto.cs",
+      "Relatorio.cs -> Servicos/Carrinho.cs",
+      "Relatorio.cs -> Util/Formatador.cs (leve)",
+      "Servicos/Carrinho.cs -> Modelos/Produto.cs"
+    ],
+    "ciclos": [],
+    "soltos": [
+      "GlobalUsings.cs"
+    ]
+  },
+  "rust": {
+    "arestas": [
+      "src/config.rs -> src/modelos/item.rs",
+      "src/main.rs -> src/config.rs",
+      "src/main.rs -> src/modelos/carrinho.rs",
+      "src/main.rs -> src/modelos/item.rs",
+      "src/main.rs -> src/modelos/mod.rs (leve)",
+      "src/modelos/carrinho.rs -> src/modelos/item.rs",
+      "src/modelos/mod.rs -> src/modelos/carrinho.rs (leve)",
+      "src/modelos/mod.rs -> src/modelos/item.rs (leve)"
+    ],
+    "ciclos": [],
     "soltos": []
   }
 }

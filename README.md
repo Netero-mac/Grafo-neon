@@ -57,6 +57,13 @@ O script só usa a biblioteca padrão do Python (3.10+) e gera uma página HTML 
 | PHP / Laravel | `use App\…`, nomes completos (`\App\Models\User`) e classes do mesmo namespace usadas pelo nome curto |
 | Kotlin / Java | `import`, nomes completos no código e classes, funções e `val` de nível superior do mesmo pacote (comum no Jetpack Compose) |
 | JavaScript / TypeScript | `import … from './x'`, `export … from`, `require()` e `import()` com caminho relativo ou `@/` |
+| Dart / Flutter | `import`, `export` e `part`, inclusive `package:nome/…` resolvido pelo `pubspec.yaml` |
+| Go | `import` de pacotes do próprio módulo (pelo `go.mod`) liga a todos os arquivos do pacote, menos os de teste. Também conta o uso de nomes declarados em outro arquivo do mesmo pacote |
+| C / C++ | `#include "…"` relativo ao arquivo, ou pelo fim do caminho. `#include <pasta/x.h>` só quando tem pasta, para não confundir com a biblioteca do sistema |
+| C# | tipos de namespaces trazidos por `using` e `global using`, do próprio namespace e dos de cima, e nomes completos |
+| Rust | `use crate::`, `super::`, `self::` e `nome_do_crate::` (com chaves), `mod x;` e caminhos para módulos filhos |
+
+Para projetos com mais de 2.000 imports, o desenho junta os fios em lotes e limita os enfeites das bordas. Assim, até a biblioteca padrão do Go (cerca de 19 mil ligações) redesenha em menos de um décimo de segundo.
 
 Só entram ligações **entre arquivos do próprio projeto**. Bibliotecas externas ficam de fora, e arquivos sem nenhuma ligação também.
 
@@ -69,7 +76,12 @@ Só contam os imports que rodam no carregamento. Ficam de fora:
 - em Python, imports dentro de funções e dentro de `if TYPE_CHECKING:`;
 - em JS/TS, `import type` e `import()` dinâmico.
 
-Esses imports aparecem mais apagados no desenho. Em Python e JS, um ciclo pode quebrar a importação conforme a ordem em que os arquivos carregam. Em Kotlin, Java e PHP ele não dá erro, mas indica acoplamento forte.
+Também não contam as referências implícitas, que ligam arquivos sem ser um import de verdade:
+
+- nomes usados dentro do mesmo pacote (Go, Kotlin/Java) ou namespace (C#, PHP);
+- as declarações `mod x;` do Rust, que só montam a árvore de módulos.
+
+Essas ligações aparecem mais apagadas no desenho. Em Python e JS, um ciclo pode quebrar a importação conforme a ordem em que os arquivos carregam. Em Kotlin, Java e PHP ele não dá erro, mas indica acoplamento forte.
 
 ## Raio-X
 
@@ -110,14 +122,15 @@ node --test testes/analisador.test.js        # analisador do site e algoritmos d
 python -m unittest discover -s testes -v     # script, página gerada e paridade com o site
 ```
 
-Os projetos em `testes/fixtures` (Python, PHP, Kotlin/Java e JS/TS) cobrem os casos difíceis:
+Os projetos em `testes/fixtures` (um por linguagem) cobrem os casos difíceis:
 
 - imports dentro de funções e de `if TYPE_CHECKING:`;
 - assinaturas de função em várias linhas;
 - subpacotes sem `__init__.py`;
 - um `json.py` do projeto com o mesmo nome da biblioteca padrão;
 - imports citados em docstrings e strings;
-- `import type`, `import()` e `require`.
+- `import type`, `import()` e `require`;
+- `package:` do Dart, `go.mod` e arquivos de teste do Go, include por pasta no C, `global using` no C#, e `use` com chaves e `super::` no Rust.
 
 `testes/esperado.json` tem, escritos à mão, os imports e ciclos certos de cada projeto. Os dois analisadores são conferidos contra esse gabarito e um contra o outro. O GitHub Actions roda tudo a cada envio, com Python 3.10 e 3.13.
 
@@ -126,7 +139,7 @@ Os projetos em `testes/fixtures` (Python, PHP, Kotlin/Java e JS/TS) cobrem os ca
 ```
 index.html      página do site
 app.js          busca o repositório no GitHub e mostra o progresso
-analisador.js   acha os imports (Python, PHP, Kotlin/Java, JS/TS)
+analisador.js   acha os imports (Python, JS/TS, PHP, Kotlin/Java, Dart, Go, C/C++, C#, Rust)
 grafo.js        algoritmos de grafo sem tela (ciclos, raio-X), compartilhado com o script
 render.js       desenho neon em Canvas, compartilhado com o script
 estilo.css      estilos, compartilhados com o script

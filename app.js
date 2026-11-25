@@ -132,7 +132,10 @@ async function desenhar(ref) {
       avisos.push('li ' + LIMITE_ARQUIVOS + ' de ' + codigo.length + ' arquivos; aponte para uma pasta, como …/tree/main/src');
       codigo = codigo.slice(0, LIMITE_ARQUIVOS);
     }
-    const { arquivos, falhas } = await baixar(ref, lista.ramo, codigo, (k, n) => { barra(k / n); status('Baixando arquivos… ' + k + ' de ' + n); });
+    // go.mod, pubspec.yaml e Cargo.toml dizem o nome do módulo/pacote/crate (Go, Dart, Rust)
+    const configs = lista.arquivos.filter(a => G.ehConfig(a.caminho) && a.tamanho <= 200000 &&
+      !/(^|\/)(node_modules|vendor|target|build|\.dart_tool)\//.test(a.caminho)).slice(0, 60);
+    const { arquivos, falhas } = await baixar(ref, lista.ramo, codigo.concat(configs), (k, n) => { barra(k / n); status('Baixando arquivos… ' + k + ' de ' + n); });
     if (falhas) avisos.push(falhas + ' arquivo(s) não baixaram');
     status('Ligando os imports…');
     await new Promise(r => setTimeout(r, 0));

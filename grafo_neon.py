@@ -3,9 +3,9 @@
 grafo_neon.py — desenha as dependências de um repositório no estilo "raio neon".
 
 Versão de linha de comando do site Grafo neon, para pastas no seu computador
-(inclusive projetos privados). Lê os arquivos de código (Python, PHP, Kotlin,
-Java, JavaScript/TypeScript), descobre quem importa quem e gera UMA página HTML
-que funciona offline, com o mesmo desenho do site.
+(inclusive projetos privados). Lê os arquivos de código (Python, JavaScript/
+TypeScript, PHP, Kotlin, Java, Dart, Go, C/C++, C# e Rust), descobre quem importa
+quem e gera UMA página HTML que funciona offline, com o mesmo desenho do site.
 
 Precisa de render.js e estilo.css na mesma pasta deste arquivo.
 
@@ -25,6 +25,7 @@ import functools
 import html
 import json
 import os
+import posixpath
 import re
 import sys
 from collections import Counter
@@ -34,24 +35,31 @@ PASTAS_IGNORADAS = {
     ".git", ".github", ".gradle", ".idea", ".vscode", "node_modules", "vendor",
     "build", "dist", "out", "target", "__pycache__", ".venv", "venv", "env",
     ".tox", ".mypy_cache", ".pytest_cache", "storage", "coverage", ".next",
-    ".nuxt", "generated", "site-packages",
+    ".nuxt", "generated", "site-packages", "obj",
 }
 PASTAS_TESTE = {"test", "tests", "testing", "teste", "testes", "fixtures", "androidTest", "__tests__", "spec"}
 RE_ARQ_TESTE = re.compile(
-    r"(test_.*\.py|.*_test\.py|conftest\.py|.*Tests?\.(kt|java|php)|.*\.(test|spec)\.[jt]sx?)$"
+    r"(test_.*\.py|.*_test\.(py|go|dart)|conftest\.py|.*Tests?\.(kt|java|php|cs)|.*\.(test|spec)\.[jt]sx?)$"
 )
 
 EXTENSOES = {
     ".py": "python", ".php": "php", ".kt": "jvm", ".java": "jvm",
     ".js": "js", ".jsx": "js", ".mjs": "js", ".cjs": "js", ".ts": "js", ".tsx": "js",
+    ".dart": "dart", ".go": "go", ".rs": "rust", ".cs": "csharp",
+    ".c": "c", ".h": "c", ".cc": "c", ".cpp": "c", ".cxx": "c", ".hh": "c", ".hpp": "c", ".hxx": "c",
 }
-NOME_LING = {"python": "Python", "php": "PHP", "jvm": "Kotlin/Java", "js": "JS/TS"}
+NOME_LING = {
+    "python": "Python", "php": "PHP", "jvm": "Kotlin/Java", "js": "JS/TS",
+    "dart": "Dart", "go": "Go", "rust": "Rust", "csharp": "C#", "c": "C/C++",
+}
+CONFIGS = {"pubspec.yaml", "go.mod", "Cargo.toml"}  # lidos para achar o nome do pacote, módulo ou crate
 
 
 # ---------------------------------------------------------------- coleta
 
-def coletar(raiz: Path, sem_testes: bool) -> list[tuple[Path, str]]:
-    achados = []
+def coletar(raiz: Path, sem_testes: bool):
+    """Devolve (arquivos de código [(caminho, linguagem)], arquivos de configuração [caminho])."""
+    achados, configs = [], []
     for pasta, subpastas, nomes in os.walk(raiz):
         subpastas[:] = sorted(
             d for d in subpastas
@@ -59,6 +67,8 @@ def coletar(raiz: Path, sem_testes: bool) -> list[tuple[Path, str]]:
             and not (sem_testes and d in PASTAS_TESTE)
         )
         for nome in sorted(nomes):
+            if nome in CONFIGS:
+                configs.append(Path(pasta) / nome)
             if nome.endswith((".blade.php", ".d.ts", ".min.js")):
                 continue
             ling = EXTENSOES.get(os.path.splitext(nome)[1])
@@ -71,7 +81,7 @@ def coletar(raiz: Path, sem_testes: bool) -> list[tuple[Path, str]]:
             except OSError:
                 continue
             achados.append((caminho, ling))
-    return achados
+    return achados, configs
 
 
 def ler(caminho: Path) -> str:
@@ -90,6 +100,49 @@ def ligar(arestas: dict, a: int, b, leve: bool = False) -> None:
         return
     atual = arestas.get((a, b))
     arestas[(a, b)] = leve if atual is None else (atual and leve)
+
+
+# ---------------------------------------------------------------- ajudantes
+
+@functools.lru_cache(maxsize=None)
+def ancestral(pasta: Path, nome: str):
+    """Pasta mais próxima, subindo a partir de `pasta` (absoluta), que contém o arquivo `nome`."""
+    d = pasta
+    while True:
+        if (d / nome).is_file():
+            return d
+        if d.parent == d:
+            return None
+        d = d.parent
+
+
+@functools.lru_cache(maxsize=None)
+def ler_config(caminho: Path) -> str:
+    return ler(caminho)
+
+
+def normalizar(p: str):
+    """Resolve . e .. num caminho relativo com /; None se sair da raiz."""
+    out = []
+    for s in p.split("/"):
+        if not s or s == ".":
+            continue
+        if s == "..":
+            if not out:
+                return None
+            out.pop()
+        else:
+            out.append(s)
+    return "/".join(out)
+
+
+def prefixo_comum(a: str, b: str) -> int:
+    k = 0
+    for x, y in zip(a.split("/"), b.split("/")):
+        if x != y:
+            break
+        k += 1
+    return k
 
 
 # ---------------------------------------------------------------- Python
@@ -146,7 +199,7 @@ def nomes_modulo_py(arq: Path, raiz: Path) -> tuple[str, str]:
     return pontilhado(topo), pontilhado(raiz)
 
 
-def analisar_python(itens, raiz, nos, arestas):
+def analisar_python(itens, raiz, nos, arestas, ctx=None):
     mapa, info = {}, {}
     for i, arq, _ in itens:
         pkg, rel = nomes_modulo_py(arq, raiz)
@@ -209,7 +262,7 @@ RE_PHP_FQ = re.compile(r"\\?((?:[A-Za-z_]\w*\\)+[A-Za-z_]\w*)")
 RE_MAIUSC = re.compile(r"\b([A-Z]\w*)\b")
 
 
-def analisar_php(itens, raiz, nos, arestas):
+def analisar_php(itens, raiz, nos, arestas, ctx=None):
     fq_map, curto, ns_de = {}, {}, {}
     for i, arq, texto in itens:
         m = RE_PHP_NS.search(texto)
@@ -251,8 +304,9 @@ def analisar_php(itens, raiz, nos, arestas):
                 liga(alvo)
         for m in RE_PHP_FQ.finditer(texto):
             liga(fq_map.get(m.group(1)))
+        # nome curto do mesmo namespace: referência implícita, não é um "use" (leve)
         for nome in set(RE_MAIUSC.findall(texto)):
-            liga(curto.get((ns, nome)))
+            ligar(arestas, i, curto.get((ns, nome)), True)
 
 
 # ---------------------------------------------------------------- Kotlin / Java
@@ -277,7 +331,7 @@ RE_IDENT = re.compile(r"\b([A-Za-z_]\w*)\b")
 RE_JVM_FQ = re.compile(r"\b((?:[a-z_]\w*\.)+[A-Za-z_]\w*)")
 
 
-def analisar_jvm(itens, raiz, nos, arestas):
+def analisar_jvm(itens, raiz, nos, arestas, ctx=None):
     fq_map, curto, pkg_de = {}, {}, {}
     for i, arq, texto in itens:
         m = RE_JVM_PKG.search(texto)
@@ -306,9 +360,9 @@ def analisar_jvm(itens, raiz, nos, arestas):
         for fq in set(RE_JVM_FQ.findall(limpo)):
             alvo = fq_map.get(fq)
             ligar(arestas, i, alvo)
+        # mesmo pacote: referência implícita, sem import (leve)
         for nome in set(RE_IDENT.findall(limpo)):
-            alvo = curto.get((pkg, nome))
-            ligar(arestas, i, alvo)
+            ligar(arestas, i, curto.get((pkg, nome)), True)
 
 
 # ---------------------------------------------------------------- JS / TS
@@ -321,7 +375,7 @@ RE_JS_TIPO = re.compile(r"(?:import|export)\s+type\b")
 EXT_JS = ["", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]
 
 
-def analisar_js(itens, raiz, nos, arestas):
+def analisar_js(itens, raiz, nos, arestas, ctx=None):
     por_caminho = {}
     for i, arq, _ in itens:
         por_caminho[os.path.normpath(str(arq))] = i
@@ -351,7 +405,286 @@ def analisar_js(itens, raiz, nos, arestas):
                     break
 
 
-ANALISADORES = {"python": analisar_python, "php": analisar_php, "jvm": analisar_jvm, "js": analisar_js}
+# ---------------------------------------------------------------- Dart
+
+RE_DART = re.compile(r"""^\s*(import|export|part)\s+['"]([^'"]+)['"]([^;]*);""", re.M)
+RE_LINHA_BLOCO = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
+
+
+def analisar_dart(itens, raiz, nos, arestas, ctx):
+    por_caminho = {arq.resolve(): i for i, arq, _ in itens}
+    pacotes = {}  # nome do pacote → pasta do pubspec.yaml
+    for cfg in ctx["configs"]:
+        if cfg.name == "pubspec.yaml":
+            m = re.search(r"""^name:\s*["']?(\w+)""", ler_config(cfg), re.M)
+            if m and m.group(1) not in pacotes:
+                pacotes[m.group(1)] = cfg.resolve().parent
+    for i, arq, _ in itens:
+        nos[i]["partes"] = list(arq.relative_to(raiz).with_suffix("").parts)
+        nos[i]["sep"] = "/"
+    for i, arq, texto in itens:
+        for m in RE_DART.finditer(RE_LINHA_BLOCO.sub(" ", texto)):
+            spec = m.group(2)
+            if spec.startswith("dart:"):
+                continue
+            if spec.startswith("package:"):
+                r = spec[8:]
+                k = r.find("/")
+                if k < 0 or r[:k] not in pacotes:
+                    continue
+                alvo = pacotes[r[:k]] / "lib" / r[k + 1:]
+            else:
+                alvo = arq.resolve().parent / spec
+            # "deferred as" carrega a biblioteca só quando é usada: import leve
+            ligar(arestas, i, por_caminho.get(Path(os.path.normpath(alvo))), bool(re.search(r"\bdeferred\b", m.group(3))))
+
+
+# ---------------------------------------------------------------- Go
+
+RE_GO_PKG = re.compile(r"^package\s+(\w+)", re.M)
+RE_GO_BLOCO = re.compile(r"^import\s*\(([\s\S]*?)\)", re.M)
+RE_GO_IMP = re.compile(r'^import\s+(?:[\w.]+\s+)?"([^"]+)"', re.M)
+RE_GO_DECL = re.compile(r"^(?:func\s+(\w+)\s*[(\[]|type\s+(\w+)|var\s+(\w+)|const\s+(\w+))", re.M)
+RE_GO_GRUPO = re.compile(r"^(?:var|const|type)\s*\(([\s\S]*?)^\)", re.M)
+RE_GO_STR = re.compile(r'"(?:\\.|[^"\\\n])*"|`[^`]*`')
+GO_IGNORAR = {"init", "main", "_"}
+
+
+def analisar_go(itens, raiz, nos, arestas, ctx):
+    por_dir, declarados, info = {}, {}, {}
+    for i, arq, texto in itens:
+        d = arq.resolve().parent
+        lista_dir = por_dir.setdefault(d, [])
+        if not arq.name.endswith("_test.go"):  # um import chega ao pacote, não aos testes dele
+            lista_dir.append(i)
+        nos[i]["partes"] = list(arq.relative_to(raiz).with_suffix("").parts)
+        nos[i]["sep"] = "/"
+        t = RE_LINHA_BLOCO.sub(" ", texto)
+        m = RE_GO_PKG.search(t)
+        chave = (d, m.group(1) if m else "")
+        decl = declarados.setdefault(chave, {})
+        nomes = [next(g for g in x.groups() if g) for x in RE_GO_DECL.finditer(t)]
+        for g in RE_GO_GRUPO.finditer(t):
+            nomes += re.findall(r"^[ \t]+(\w+)", g.group(1), re.M)
+        for n in nomes:
+            if n not in GO_IGNORAR and n not in decl:
+                decl[n] = i
+        info[i] = (t, chave)
+    for i, arq, _ in itens:
+        t, chave = info[i]
+        raiz_mod = ancestral(arq.resolve().parent, "go.mod")
+        m = re.search(r"^module\s+(\S+)", ler_config(raiz_mod / "go.mod"), re.M) if raiz_mod else None
+        if m:
+            mod = m.group(1)
+            caminhos = [s for b in RE_GO_BLOCO.finditer(t) for s in re.findall(r'"([^"]+)"', b.group(1))]
+            caminhos += RE_GO_IMP.findall(t)
+            for c in caminhos:
+                if c != mod and not c.startswith(mod + "/"):
+                    continue
+                dir_alvo = raiz_mod if c == mod else Path(os.path.normpath(raiz_mod / c[len(mod) + 1:]))
+                for j in por_dir.get(dir_alvo, []):
+                    ligar(arestas, i, j)
+        # mesmo pacote: os arquivos da pasta se enxergam sem import (leve; Go nem permite ciclo de import)
+        decl = declarados[chave]
+        for nome in set(RE_IDENT.findall(RE_GO_STR.sub(" ", t))):
+            ligar(arestas, i, decl.get(nome), True)
+
+
+# ---------------------------------------------------------------- C / C++
+
+RE_C_INC = re.compile(r'^[ \t]*#[ \t]*include[ \t]*([<"])([^">\n]+)[">]', re.M)
+RE_BLOCO = re.compile(r"/\*.*?\*/", re.S)
+
+
+def analisar_c(itens, raiz, nos, arestas, ctx):
+    por_caminho, por_nome, rel = {}, {}, {}
+    for i, arq, _ in itens:
+        r = arq.relative_to(raiz).as_posix()
+        rel[i] = r
+        por_caminho[r] = i
+        por_nome.setdefault(arq.name, []).append(i)
+        nos[i]["partes"] = r.split("/")
+        nos[i]["sep"] = "/"
+    for i, arq, texto in itens:
+        for m in RE_C_INC.finditer(RE_BLOCO.sub(" ", texto)):
+            spec = m.group(2).strip()
+            alvo = None
+            if m.group(1) == '"':
+                n = normalizar(posixpath.join(posixpath.dirname(rel[i]), spec))
+                if n is not None:
+                    alvo = por_caminho.get(n)
+            # senão procura pelo fim do caminho (pastas de include); <...> só quando tem pasta
+            if alvo is None and (m.group(1) == '"' or "/" in spec):
+                melhor, pm = None, -1
+                for j in por_nome.get(posixpath.basename(spec), []):
+                    c = rel[j]
+                    if c != spec and not c.endswith("/" + spec):
+                        continue
+                    pc = prefixo_comum(c, rel[i])
+                    if pc > pm:
+                        pm, melhor = pc, j
+                alvo = melhor
+            ligar(arestas, i, alvo)
+
+
+# ---------------------------------------------------------------- C#
+
+RE_CS_NS = re.compile(r"^\s*namespace\s+([\w.]+)", re.M)
+RE_CS_TIPO = re.compile(r"\b(?:class|interface|struct|enum|record(?:\s+(?:class|struct))?)\s+(\w+)")
+RE_CS_USING = re.compile(r"^\s*(global\s+)?using\s+(?:static\s+)?(?:(\w+)\s*=\s*)?([\w.]+)\s*;", re.M)
+RE_FQ = re.compile(r"\b((?:[A-Za-z_]\w*\.)+[A-Za-z_]\w*)")
+
+
+def analisar_cs(itens, raiz, nos, arestas, ctx):
+    por_ns, fq, info, globais = {}, {}, {}, set()
+    for i, arq, texto in itens:
+        t = RE_COMENTARIO.sub(" ", texto)
+        m = RE_CS_NS.search(t)
+        ns = m.group(1) if m else ""
+        usings, apelidos = [], []
+        for u in RE_CS_USING.finditer(t):
+            if u.group(2):
+                apelidos.append(u.group(3))
+            elif u.group(1):
+                globais.add(u.group(3))
+            else:
+                usings.append(u.group(3))
+        info[i] = (t, ns, usings, apelidos)
+        mapa = por_ns.setdefault(ns, {})
+        for nome in RE_CS_TIPO.findall(t):
+            mapa.setdefault(nome, i)
+            fq.setdefault(f"{ns}.{nome}" if ns else nome, i)
+        nos[i]["partes"] = (ns.split(".") if ns else []) + [arq.stem]
+        nos[i]["sep"] = "."
+    for i, arq, _ in itens:
+        t, ns, usings, apelidos = info[i]
+        # via using/global using conta como import; o próprio namespace, os de cima e o global são implícitos (leve)
+        com_using = [por_ns[v] for v in set(usings) | globais if v in por_ns]
+        implicitos, p = {""}, ns
+        while p:
+            implicitos.add(p)
+            p = p.rsplit(".", 1)[0] if "." in p else ""
+        sem_using = [por_ns[v] for v in implicitos if v in por_ns]
+        for a in apelidos:
+            ligar(arestas, i, fq.get(a))
+        for nome in set(RE_IDENT.findall(t)):
+            for mp in com_using:
+                ligar(arestas, i, mp.get(nome))
+            for mp in sem_using:
+                ligar(arestas, i, mp.get(nome), True)
+        for nome in set(RE_FQ.findall(t)):
+            ligar(arestas, i, fq.get(nome))
+
+
+# ---------------------------------------------------------------- Rust
+
+RE_RS_MOD = re.compile(r"^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*;", re.M)
+RE_RS_USE = re.compile(r"^\s*(?:pub(?:\([^)]*\))?\s+)?use\s+([^;]+);", re.M)
+RE_RS_CAMINHO = re.compile(r"\b(crate|self|super)((?:::\w+)+)")
+RE_RS_RELATIVO = re.compile(r"(?<![\w:])([a-z_]\w*)((?:::\w+)+)")
+RE_RS_LIMPA = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"', re.S)
+
+
+def expandir_use(s: str) -> list:
+    """'crate::a::{b, c::{d, e as f}}' → ['crate::a::b', 'crate::a::c::d', 'crate::a::c::e']"""
+    s = re.sub(r"\s+", "", re.sub(r"\s+as\s+\w+", "", s))
+    k = s.find("{")
+    if k < 0:
+        return [s]
+    pre, partes, prof, ini = s[:k], [], 0, k + 1
+    for j in range(k + 1, len(s)):
+        ch = s[j]
+        if ch == "{":
+            prof += 1
+        elif ch == "}":
+            if prof == 0:
+                partes.append(s[ini:j])
+                break
+            prof -= 1
+        elif ch == "," and prof == 0:
+            partes.append(s[ini:j])
+            ini = j + 1
+    res = []
+    for p in partes:
+        if p:
+            res += [re.sub(r"::$", "", pre)] if p == "self" else expandir_use(pre + p)
+    return res
+
+
+def analisar_rust(itens, raiz, nos, arestas, ctx):
+    mods, info = {}, {}
+    for i, arq, _ in itens:
+        a = arq.resolve()
+        d_cargo = ancestral(a.parent, "Cargo.toml")
+        mp = None
+        if d_cargo is not None:
+            try:
+                r = a.relative_to(d_cargo / "src")
+            except ValueError:
+                r = None
+            if r is not None:
+                mp = list(r.with_suffix("").parts)
+                if len(mp) == 1 and mp[0] in ("lib", "main"):
+                    mp = []
+                elif mp[-1] == "mod":
+                    mp.pop()
+                mods.setdefault((d_cargo, "::".join(mp)), i)
+        info[i] = (d_cargo, mp)
+        ps = list(arq.relative_to(raiz).with_suffix("").parts)
+        if len(ps) > 1 and ps[-1] == "mod":
+            ps.pop()
+        nos[i]["partes"] = ps
+        nos[i]["sep"] = "/"
+    for i, arq, texto in itens:
+        d_cargo, mp = info[i]
+        if mp is None:
+            continue
+        m = re.search(r'^\[package\][^\[]*?^name\s*=\s*"([^"]+)"', ler_config(d_cargo / "Cargo.toml"), re.M)
+        nome_crate = m.group(1).replace("-", "_") if m else ""
+        t = RE_RS_LIMPA.sub(" ", texto)
+
+        def ligar_caminho(segs, minimo):
+            for k in range(len(segs), minimo - 1, -1):
+                j = mods.get((d_cargo, "::".join(segs[:k])))
+                if j is not None:
+                    ligar(arestas, i, j)
+                    return True
+            return False
+
+        # "mod x;" só monta a árvore de módulos (leve); o uso real vem pelos caminhos
+        for m in RE_RS_MOD.finditer(t):
+            ligar(arestas, i, mods.get((d_cargo, "::".join(mp + [m.group(1)]))), True)
+        # caminho sem prefixo no meio do código (config::carregar()): só vale para módulos filhos
+        for m in RE_RS_RELATIVO.finditer(t):
+            if m.group(1) in ("crate", "self", "super", nome_crate):
+                continue
+            ligar_caminho(mp + [m.group(1)] + [x for x in m.group(2).split("::") if x], len(mp) + 1)
+        usados = [p for m in RE_RS_USE.finditer(t) for p in expandir_use(m.group(1))]
+        usados += [m.group(1) + m.group(2) for m in RE_RS_CAMINHO.finditer(t)]
+        if nome_crate:
+            usados += [nome_crate + m.group(1) for m in re.finditer(r"\b" + nome_crate + r"((?:::\w+)+)", t)]
+        for u in set(usados):
+            segs = [x for x in u.split("::") if x and x != "*"]
+            if not segs:
+                continue
+            cab = segs[0]
+            if cab in ("crate", nome_crate):
+                ligar_caminho(segs[1:], 0)
+            elif cab == "self":
+                ligar_caminho(mp + segs[1:], len(mp))
+            elif cab == "super":
+                b, segs = mp[:-1], segs[1:]
+                while segs and segs[0] == "super":
+                    b, segs = b[:-1], segs[1:]
+                ligar_caminho(b + segs, len(b))
+            elif not ligar_caminho(mp + segs, len(mp) + 1):
+                ligar_caminho(segs, 1)  # caminho sem prefixo (edição 2018)
+
+
+ANALISADORES = {
+    "python": analisar_python, "php": analisar_php, "jvm": analisar_jvm, "js": analisar_js,
+    "dart": analisar_dart, "go": analisar_go, "c": analisar_c, "csharp": analisar_cs, "rust": analisar_rust,
+}
 
 
 # ---------------------------------------------------------------- montagem
@@ -378,7 +711,11 @@ def nomes_curtos(nos):
 
 
 def montar_grafo(raiz: Path, sem_testes: bool, max_nos: int, titulo: str | None):
-    arquivos = coletar(raiz, sem_testes)
+    arquivos, configs = coletar(raiz, sem_testes)
+    # mesma ordem do site (por caminho), para os empates "o primeiro vence" darem o mesmo resultado
+    arquivos.sort(key=lambda x: x[0].relative_to(raiz).as_posix())
+    configs.sort(key=lambda c: c.relative_to(raiz).as_posix())
+    ctx = {"configs": configs}
     nos = [{"caminho": a.relative_to(raiz).as_posix(), "ling": l, "partes": [a.stem], "sep": "/"}
            for a, l in arquivos]
     arestas: dict[tuple[int, int], bool] = {}
@@ -386,7 +723,7 @@ def montar_grafo(raiz: Path, sem_testes: bool, max_nos: int, titulo: str | None)
     for i, (arq, ling) in enumerate(arquivos):
         por_ling.setdefault(ling, []).append((i, arq, ler(arq)))
     for ling, itens in por_ling.items():
-        ANALISADORES[ling](itens, raiz, nos, arestas)
+        ANALISADORES[ling](itens, raiz, nos, arestas, ctx)
 
     grau = Counter()
     for a, b in arestas:

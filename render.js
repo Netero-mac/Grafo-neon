@@ -306,6 +306,22 @@ G.montar = function (D) {
       g.beginPath(); g.moveTo(geo[k], geo[k + 1]);
       g.bezierCurveTo(geo[k + 2], geo[k + 3], geo[k + 4], geo[k + 5], geo[k + 6], geo[k + 7]); g.stroke();
     };
+    // Uma passada desenha todos os fios com o mesmo estilo. Em projetos grandes, junta 48 fios por traço:
+    // com milhares de imports, um traço por fio deixa o desenho lento e a diferença não aparece.
+    const LOTE = E > 2000 ? 48 : 1;
+    const passada = (fibras, extra) => {
+      let a = -1, n = 0;
+      for (let e = 0; e < E; e++) {
+        const ae = alfa(e) * (extra ? extra(e) : 1);
+        if (ae !== a || n >= LOTE) { if (n) g.stroke(); g.beginPath(); g.globalAlpha = a = ae; n = 0; }
+        for (let f = 0; f < fibras; f++) {
+          const k = (e * F + f) * 8;
+          g.moveTo(geo[k], geo[k + 1]); g.bezierCurveTo(geo[k + 2], geo[k + 3], geo[k + 4], geo[k + 5], geo[k + 6], geo[k + 7]);
+        }
+        n++;
+      }
+      if (n) g.stroke();
+    };
     const ponto = (k, tt) => {
       const u = 1 - tt;
       return [u * u * u * geo[k] + 3 * u * u * tt * geo[k + 2] + 3 * u * tt * tt * geo[k + 4] + tt * tt * tt * geo[k + 6],
@@ -332,9 +348,10 @@ G.montar = function (D) {
       const sx = Math.sign(gc[7] - gc[1]) || 1;
       galho(gc[7], gc[8], sx > 0 ? (R() - 0.5) : Math.PI + (R() - 0.5), (14 + R() * 26) * s * 1.4, 2, gc[0]);
     }
+    const chancePelo = Math.min(0.6, 500 / E);   // no máximo ~500 pelos, por maior que seja o projeto
     for (let e = 0; e < E; e++) {
       const r = R(), tt = 0.35 + R() * 0.3, ang = R();
-      if (r < 0.6) {
+      if (r < chancePelo) {
         const [x, y] = ponto(e * F * 8, tt);
         const dx = x - W / 2;
         if (Math.abs(dx) > W * 0.16) galho(x, y, (dx > 0 ? 0 : Math.PI) + (ang - 0.5) * 1.4, (12 + R() * 28) * s * 1.4, 2, -1 - e);
@@ -343,7 +360,7 @@ G.montar = function (D) {
 
     // 1) tubos largos
     g.strokeStyle = rgba(P.tubo, 0.15); g.lineWidth = Math.max(5, 11 * s);
-    for (let e = 0; e < E; e++) { g.globalAlpha = alfa(e); curva(e * F * 8); }
+    passada(1);
     g.strokeStyle = rgba(P.gancho, 0.34); g.lineWidth = Math.max(4, 9 * s);
     for (const gc of ganchos) {
       g.globalAlpha = foco ? (foco.desc.has(gc[0]) ? 1 : 0.22) : modoCiclos ? 0.15 : 1;
@@ -356,12 +373,12 @@ G.montar = function (D) {
 
     // 2) brilho médio, 3) filamentos finos e um leve acúmulo de luz
     g.strokeStyle = rgba(P.brilho, 0.07); g.lineWidth = Math.max(2, 4 * s);
-    for (let e = 0; e < E; e++) { g.globalAlpha = alfa(e); for (let f = 0; f < F; f++) curva((e * F + f) * 8); }
+    passada(F);
     g.strokeStyle = rgba(P.fio, 0.5); g.lineWidth = Math.max(0.6, 1.0 * s);
-    for (let e = 0; e < E; e++) { g.globalAlpha = alfa(e) * (A[e][2] ? 0.55 : 1); for (let f = 0; f < F; f++) curva((e * F + f) * 8); }
+    passada(F, e => (A[e][2] ? 0.55 : 1));
     g.globalCompositeOperation = 'lighter';
     g.strokeStyle = rgba(P.acumulo, 0.035); g.lineWidth = Math.max(0.6, 1.0 * s);
-    for (let e = 0; e < E; e++) { g.globalAlpha = alfa(e); for (let f = 0; f < F; f++) curva((e * F + f) * 8); }
+    passada(F);
     g.globalCompositeOperation = 'source-over';
     g.strokeStyle = rgba(P.pelo, 0.6); g.lineWidth = 0.7;
     for (const [dono, pts] of pelos) {
