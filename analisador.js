@@ -11,7 +11,7 @@ const PASTAS_IGNORADAS = new Set([
   '.tox', '.mypy_cache', '.pytest_cache', 'storage', 'coverage', '.next',
   '.nuxt', 'generated', 'site-packages',
 ]);
-const PASTAS_TESTE = new Set(['test', 'tests', 'testing', 'androidTest', '__tests__', 'spec']);
+const PASTAS_TESTE = new Set(['test', 'tests', 'testing', 'teste', 'testes', 'fixtures', 'androidTest', '__tests__', 'spec']);
 const RE_ARQ_TESTE = /^(test_.*\.py|.*_test\.py|conftest\.py|.*Tests?\.(kt|java|php)|.*\.(test|spec)\.[jt]sx?)$/;
 const EXTENSOES = {
   '.py': 'python', '.php': 'php', '.kt': 'jvm', '.java': 'jvm',

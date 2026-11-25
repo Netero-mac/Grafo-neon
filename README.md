@@ -1,5 +1,7 @@
 # Grafo neon
 
+[![testes](https://github.com/Netero-mac/Grafo-neon/actions/workflows/testes.yml/badge.svg)](https://github.com/Netero-mac/Grafo-neon/actions/workflows/testes.yml)
+
 Cole o link de um repositório público do GitHub e veja as dependências entre os arquivos desenhadas como um raio neon.
 
 **Site:** https://netero-mac.github.io/Grafo-neon/
@@ -45,13 +47,13 @@ python3 grafo_neon.py caminho/do/projeto -o meu_grafo.html --titulo "Meu App"
 python3 grafo_neon.py caminho/do/projeto --sem-testes --max-nos 300 --json
 ```
 
-O script só usa a biblioteca padrão do Python (3.8+) e gera uma página HTML única que funciona offline. Ele precisa de `render.js` e `estilo.css` na mesma pasta, então baixe o repositório inteiro.
+O script só usa a biblioteca padrão do Python (3.9+) e gera uma página HTML única que funciona offline. Ele precisa de `render.js` e `estilo.css` na mesma pasta, então baixe o repositório inteiro.
 
 ## Linguagens
 
 | Linguagem | O que conta como dependência |
 |---|---|
-| Python | `import` e `from … import`, inclusive relativos (`from . import x`). O script lê com `ast`; o site lê com expressões regulares e chegou ao mesmo resultado nos testes. |
+| Python | `import` e `from … import`, inclusive relativos (`from . import x`). O script lê com `ast`; o site lê com expressões regulares e os dois batem com o gabarito dos testes. |
 | PHP / Laravel | `use App\…`, nomes completos (`\App\Models\User`) e classes do mesmo namespace usadas pelo nome curto |
 | Kotlin / Java | `import`, nomes completos no código e classes, funções e `val` de nível superior do mesmo pacote (comum no Jetpack Compose) |
 | JavaScript / TypeScript | `import … from './x'`, `export … from`, `require()` e `import()` com caminho relativo ou `@/` |
@@ -91,6 +93,24 @@ Tudo roda no navegador. Não existe servidor, e nada é enviado para lugar nenhu
 - Imports montados em tempo de execução (`importlib`, `require(variavel)`, rotas do Laravel em texto) não aparecem.
 - Em Kotlin e PHP, nomes curtos do mesmo pacote ou namespace são reconhecidos por texto, então pode haver alguma ligação a mais.
 
+## Testes
+
+```bash
+node --test testes/analisador.test.js        # analisador do site e algoritmos de grafo
+python -m unittest discover -s testes -v     # script, página gerada e paridade com o site
+```
+
+Os projetos em `testes/fixtures` (Python, PHP, Kotlin/Java e JS/TS) cobrem os casos difíceis:
+
+- imports dentro de funções e de `if TYPE_CHECKING:`;
+- assinaturas de função em várias linhas;
+- subpacotes sem `__init__.py`;
+- um `json.py` do projeto com o mesmo nome da biblioteca padrão;
+- imports citados em docstrings e strings;
+- `import type`, `import()` e `require`.
+
+`testes/esperado.json` tem, escritos à mão, os imports e ciclos certos de cada projeto. Os dois analisadores são conferidos contra esse gabarito e um contra o outro. O GitHub Actions roda tudo a cada envio, com Python 3.9 e 3.13.
+
 ## Estrutura
 
 ```
@@ -102,6 +122,7 @@ render.js       desenho neon em Canvas, compartilhado com o script
 estilo.css      estilos, compartilhados com o script
 exemplo.json    grafo de exemplo mostrado na abertura (núcleo do pytest)
 grafo_neon.py   versão de linha de comando para pastas locais
+testes/         testes, projetos de exemplo e gabarito
 ```
 
 Para rodar o site no seu computador: `python3 -m http.server` na pasta do projeto, depois abra `http://localhost:8000`.

@@ -1,0 +1,28 @@
+name: testes
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  testes:
+    name: Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Analisador do site (JavaScript)
+        run: node --test testes/analisador.test.js
+      - name: Script de linha de comando e paridade com o site (Python)
+        run: python -m unittest discover -s testes -v
+      - name: Sintaxe dos arquivos do site
+        run: for f in analisador.js grafo.js render.js app.js; do node --check "$f"; done

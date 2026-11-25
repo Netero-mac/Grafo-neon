@@ -1,0 +1,67 @@
+{
+  "_sobre": "Imports esperados em cada projeto de testes/fixtures, escritos à mão. '(leve)' = import que não roda no carregamento.",
+  "python": {
+    "arestas": [
+      "app/__init__.py -> app/nucleo.py",
+      "app/__init__.py -> app/util.py",
+      "app/modelos.py -> app/nucleo.py",
+      "app/nucleo.py -> app/modelos.py",
+      "app/nucleo.py -> app/servicos/pagamento.py (leve)",
+      "app/nucleo.py -> app/util.py (leve)",
+      "app/servicos/pagamento.py -> app/modelos.py",
+      "app/util.py -> app/json.py",
+      "scripts/rodar.py -> app/nucleo.py",
+      "scripts/rodar.py -> scripts/util_local.py"
+    ],
+    "ciclos": [
+      [
+        "app/modelos.py",
+        "app/nucleo.py"
+      ]
+    ]
+  },
+  "php": {
+    "arestas": [
+      "app/Http/Controllers/ProdutoController.php -> app/Http/Controllers/Controller.php",
+      "app/Http/Controllers/ProdutoController.php -> app/Models/Produto.php",
+      "app/Http/Controllers/ProdutoController.php -> app/Services/Orcamento.php",
+      "app/Models/Produto.php -> app/Models/Categoria.php",
+      "app/Models/Produto.php -> app/Models/HasPreco.php",
+      "app/Services/Orcamento.php -> app/Models/Categoria.php",
+      "app/Services/Orcamento.php -> app/Models/Produto.php",
+      "routes/web.php -> app/Http/Controllers/ProdutoController.php"
+    ],
+    "ciclos": []
+  },
+  "kotlin": {
+    "arestas": [
+      "app/src/main/java/com/marco/caderno/HomeScreen.kt -> app/src/main/java/com/marco/caderno/Util.kt",
+      "app/src/main/java/com/marco/caderno/HomeScreen.kt -> app/src/main/java/com/marco/caderno/data/Compra.kt",
+      "app/src/main/java/com/marco/caderno/HomeScreen.kt -> app/src/main/java/com/marco/caderno/data/Repositorio.java",
+      "app/src/main/java/com/marco/caderno/MainActivity.kt -> app/src/main/java/com/marco/caderno/HomeScreen.kt",
+      "app/src/main/java/com/marco/caderno/MainActivity.kt -> app/src/main/java/com/marco/caderno/data/Repositorio.java",
+      "app/src/main/java/com/marco/caderno/MainActivity.kt -> app/src/main/java/com/marco/caderno/ui/theme/Theme.kt",
+      "app/src/main/java/com/marco/caderno/data/Repositorio.java -> app/src/main/java/com/marco/caderno/data/Compra.kt",
+      "app/src/main/java/com/marco/caderno/ui/theme/Theme.kt -> app/src/main/java/com/marco/caderno/ui/theme/Color.kt"
+    ],
+    "ciclos": []
+  },
+  "js": {
+    "arestas": [
+      "src/app.tsx -> src/config.ts (leve)",
+      "src/app.tsx -> src/pesado.js (leve)",
+      "src/app.tsx -> src/servicos/api.ts",
+      "src/index.ts -> src/app.tsx",
+      "src/index.ts -> src/util/index.ts",
+      "src/servicos/api.ts -> src/util/index.ts",
+      "src/util/index.ts -> src/app.tsx"
+    ],
+    "ciclos": [
+      [
+        "src/app.tsx",
+        "src/servicos/api.ts",
+        "src/util/index.ts"
+      ]
+    ]
+  }
+}

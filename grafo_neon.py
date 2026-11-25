@@ -36,7 +36,7 @@ PASTAS_IGNORADAS = {
     ".tox", ".mypy_cache", ".pytest_cache", "storage", "coverage", ".next",
     ".nuxt", "generated", "site-packages",
 }
-PASTAS_TESTE = {"test", "tests", "testing", "androidTest", "__tests__", "spec"}
+PASTAS_TESTE = {"test", "tests", "testing", "teste", "testes", "fixtures", "androidTest", "__tests__", "spec"}
 RE_ARQ_TESTE = re.compile(
     r"(test_.*\.py|.*_test\.py|conftest\.py|.*Tests?\.(kt|java|php)|.*\.(test|spec)\.[jt]sx?)$"
 )
