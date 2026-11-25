@@ -47,7 +47,7 @@ python3 grafo_neon.py caminho/do/projeto -o meu_grafo.html --titulo "Meu App"
 python3 grafo_neon.py caminho/do/projeto --sem-testes --max-nos 300 --json
 ```
 
-O script só usa a biblioteca padrão do Python (3.9+) e gera uma página HTML única que funciona offline. Ele precisa de `render.js` e `estilo.css` na mesma pasta, então baixe o repositório inteiro.
+O script só usa a biblioteca padrão do Python (3.10+) e gera uma página HTML única que funciona offline. Ele precisa de `render.js` e `estilo.css` na mesma pasta, então baixe o repositório inteiro.
 
 ## Linguagens
 
@@ -109,7 +109,7 @@ Os projetos em `testes/fixtures` (Python, PHP, Kotlin/Java e JS/TS) cobrem os ca
 - imports citados em docstrings e strings;
 - `import type`, `import()` e `require`.
 
-`testes/esperado.json` tem, escritos à mão, os imports e ciclos certos de cada projeto. Os dois analisadores são conferidos contra esse gabarito e um contra o outro. O GitHub Actions roda tudo a cada envio, com Python 3.9 e 3.13.
+`testes/esperado.json` tem, escritos à mão, os imports e ciclos certos de cada projeto. Os dois analisadores são conferidos contra esse gabarito e um contra o outro. O GitHub Actions roda tudo a cada envio, com Python 3.10 e 3.13.
 
 ## Estrutura
 
