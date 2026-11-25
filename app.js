@@ -150,6 +150,8 @@ async function desenhar(ref) {
     if (ref.ramo) q.set('ramo', ref.ramo);
     if (raiz) q.set('pasta', raiz);
     if (!semTestes) q.set('testes', '1');
+    const cor = new URLSearchParams(location.search).get('cor');
+    if (cor) q.set('cor', cor);
     try { history.replaceState(null, '', '?' + q.toString().replace(/%2F/gi, '/')); } catch (e) { /* página aberta como arquivo */ }
     $('link').value = 'github.com/' + ref.dono + '/' + ref.repo + (ref.ramo ? '/tree/' + ref.ramo + (raiz ? '/' + raiz : '') : '');
   } catch (e) {

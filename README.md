@@ -24,6 +24,19 @@ Depois de desenhar, o endereço da página vira um link que você pode compartil
 
 Os testes ficam de fora por padrão. Desmarque **Ignorar testes** para incluí-los.
 
+### Cores e imagens
+
+Abaixo do desenho dá para escolher a paleta (**Neon**, **Ouro**, **Gelo** ou **Brasa**) e baixar um PNG:
+
+| Formato | Tamanho |
+|---|---|
+| Como está na tela | o tamanho do desenho, com a densidade da sua tela |
+| Papel de parede | 1080 × 2340, com espaço para o relógio e os ícones |
+| Post | 1080 × 1350, com o nome do projeto e os números embaixo |
+| Prévia do GitHub | 1280 × 640: suba em **Settings → Social preview** do repositório, e o link do projeto passa a mostrar o grafo quando for compartilhado |
+
+A cor escolhida fica salva no navegador e vai junto no link (`&cor=ouro`).
+
 ### No terminal (pastas locais e projetos privados)
 
 ```bash

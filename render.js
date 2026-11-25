@@ -9,6 +9,39 @@ const $ = id => document.getElementById(id);
 const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 G.esc = esc;
 
+/* Paletas: cores em [r, g, b] para compor com transparência; `css` vira as cores de destaque da página. */
+const PALETAS = {
+  neon: { nome: 'Neon', poeira: [120, 90, 155], tubo: [140, 92, 200], gancho: [150, 104, 212], raiz: [205, 160, 255], brilho: [175, 105, 230],
+    fio: [226, 112, 255], acumulo: [255, 150, 255], pelo: [210, 165, 245], sombra: '#ff5cf4', glow: [255, 110, 245], tranca: [255, 150, 250],
+    meio: [255, 215, 255], destaque: [255, 175, 255], dep: '#c9a6ff', rotuloSel: '#ff8cf7',
+    ciclo: '#ff3b5c', cicloClaro: '#ff9db0', cicloNome: 'vermelhos', css: { mag: '#ff5cf4', lav: '#a77bd6' } },
+  ouro: { nome: 'Ouro', poeira: [125, 105, 62], tubo: [150, 110, 40], gancho: [170, 125, 45], raiz: [255, 215, 140], brilho: [200, 150, 60],
+    fio: [238, 192, 96], acumulo: [255, 222, 145], pelo: [228, 192, 122], sombra: '#ffb000', glow: [255, 190, 70], tranca: [255, 210, 120],
+    meio: [255, 242, 205], destaque: [255, 226, 152], dep: '#e8c88a', rotuloSel: '#ffcf5c',
+    ciclo: '#ff4040', cicloClaro: '#ff9c9c', cicloNome: 'vermelhos', css: { mag: '#ffc94d', lav: '#c9a25a' } },
+  gelo: { nome: 'Gelo', poeira: [72, 100, 140], tubo: [60, 110, 190], gancho: [70, 125, 205], raiz: [160, 220, 255], brilho: [80, 150, 230],
+    fio: [110, 200, 255], acumulo: [165, 232, 255], pelo: [150, 200, 240], sombra: '#3ad1ff', glow: [90, 200, 255], tranca: [140, 220, 255],
+    meio: [218, 246, 255], destaque: [172, 236, 255], dep: '#9fc3ff', rotuloSel: '#7fe3ff',
+    ciclo: '#ff4d6d', cicloClaro: '#ffa3b4', cicloNome: 'vermelhos', css: { mag: '#5ce1ff', lav: '#7aa7d6' } },
+  brasa: { nome: 'Brasa', poeira: [130, 72, 50], tubo: [170, 70, 30], gancho: [185, 80, 35], raiz: [255, 180, 110], brilho: [220, 100, 40],
+    fio: [255, 142, 62], acumulo: [255, 192, 122], pelo: [240, 162, 102], sombra: '#ff6a00', glow: [255, 130, 50], tranca: [255, 172, 92],
+    meio: [255, 232, 192], destaque: [255, 202, 142], dep: '#ffc48a', rotuloSel: '#ffb070',
+    ciclo: '#2fd5ff', cicloClaro: '#9eeaff', cicloNome: 'azuis', css: { mag: '#ff8a3d', lav: '#d08a5a' } },
+};
+G.paletas = PALETAS;
+const rgba = (c, a) => 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')';
+let paletaNome = 'neon';
+try {
+  const daUrl = new URLSearchParams(location.search).get('cor');
+  const salva = localStorage.getItem('grafo-neon-cor');
+  paletaNome = PALETAS[daUrl] ? daUrl : PALETAS[salva] ? salva : 'neon';
+} catch (e) { /* sem acesso ao armazenamento */ }
+function aplicarCss(P) {
+  const r = document.documentElement.style;
+  r.setProperty('--mag', P.css.mag); r.setProperty('--lav', P.css.lav);
+  document.querySelectorAll('.nome-cor-ciclo').forEach(el => { el.textContent = P.cicloNome; });
+}
+
 const rng = seed => () => {
   seed = (seed + 0x6D2B79F5) | 0;
   let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
@@ -21,7 +54,8 @@ G.montar = function (D) {
   const reduz = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const ac = new AbortController();
   const on = (el, ev, fn) => el.addEventListener(ev, fn, { signal: ac.signal });
-  let vivo = true, rafId = 0, ro = null;
+  let vivo = true, rafId = 0, ro = null, P = PALETAS[paletaNome];
+  aplicarCss(P);
   const destruir = () => { vivo = false; ac.abort(); if (ro) ro.disconnect(); cancelAnimationFrame(rafId); };
   const N = D.nos.length, A = D.arestas, E = A.length;
 
@@ -43,11 +77,14 @@ G.montar = function (D) {
     fig.style.height = '';
     cv.hidden = true;
     $('formBusca').hidden = true;
+    if ($('acoes')) $('acoes').hidden = true;
     $('cadeia').textContent = '';
     return { destruir };
   }
   cv.hidden = false;
   $('formBusca').hidden = false;
+  if ($('acoes')) $('acoes').hidden = false;
+  if ($('avisoImagem')) $('avisoImagem').textContent = '';
 
   /* ---------- estrutura do grafo (não depende da semente) ---------- */
   const out = [], inn = [], outE = [];
@@ -117,8 +154,8 @@ G.montar = function (D) {
   const secC = $('ciclos');
   if (secC) {
     const tot = cic.grupos.reduce((s, gr) => s + gr.nos.length, 0);
-    $('ciclosResumo').textContent = cic.grupos.length
-      ? cic.grupos.length + (cic.grupos.length > 1 ? ' grupos de arquivos se importam' : ' grupo de arquivos se importa') + ' em círculo (' + tot + ' arquivos, fios vermelhos). Em Python e JS isso pode quebrar a importação conforme a ordem; em qualquer linguagem, indica acoplamento forte.'
+    $('ciclosResumo').innerHTML = cic.grupos.length
+      ? cic.grupos.length + (cic.grupos.length > 1 ? ' grupos de arquivos se importam' : ' grupo de arquivos se importa') + ' em círculo (' + tot + ' arquivos, fios <span class="nome-cor-ciclo">' + P.cicloNome + '</span>). Em Python e JS isso pode quebrar a importação conforme a ordem; em qualquer linguagem, indica acoplamento forte.'
       : 'Nenhum import circular: nenhum grupo de arquivos se importa em círculo no carregamento.';
     $('ciclosLista').innerHTML = cic.grupos.slice(0, 6).map(gr =>
       '<li><b>' + gr.nos.length + ' arquivos:</b> ' + gr.caminho.map(nomeBtn).join(' <span class="seta">→</span> ') + '</li>').join('') +
@@ -198,12 +235,13 @@ G.montar = function (D) {
     g.stroke();
   }
 
-  function desenhar() {
+  // alvo/alvoBrilho: canvases de destino (a tela por padrão); opcoes.maxRotulos limita os nomes
+  function desenhar(alvo = base, alvoBrilho = brilho, opcoes = {}) {
     const t = H * 0.045, b = H * 0.04;
     PX = new Float64Array(N); PY = new Float64Array(N);
     for (let i = 0; i < N; i++) { PX[i] = X[i] * W; PY[i] = t + Y[i] * (H - t - b); }
     const R = rng(semente * 7 + 13);
-    const g = base.getContext('2d'), gb = brilho.getContext('2d');
+    const g = alvo.getContext('2d'), gb = alvoBrilho.getContext('2d');
     for (const c of [g, gb]) {
       c.setTransform(dpr, 0, 0, dpr, 0, 0); c.globalAlpha = 1; c.shadowBlur = 0;
       c.globalCompositeOperation = 'source-over'; c.lineCap = 'round'; c.lineJoin = 'round';
@@ -214,7 +252,7 @@ G.montar = function (D) {
 
     // poeira de fundo
     const nb = Math.round(170 * W * H / (850 * 1100));
-    g.lineWidth = 1; g.strokeStyle = 'rgba(120,90,155,0.24)';
+    g.lineWidth = 1; g.strokeStyle = rgba(P.poeira, 0.24);
     for (let i = 0; i < nb; i++) {
       const x = R() * W, y = R() * H, a = R() * 6.28, l = (8 + R() * 22) * Math.max(s, 0.7);
       g.beginPath(); g.moveTo(x, y);
@@ -277,28 +315,28 @@ G.montar = function (D) {
     }
 
     // 1) tubos largos
-    g.strokeStyle = 'rgba(140,92,200,0.15)'; g.lineWidth = Math.max(5, 11 * s);
+    g.strokeStyle = rgba(P.tubo, 0.15); g.lineWidth = Math.max(5, 11 * s);
     for (let e = 0; e < E; e++) { g.globalAlpha = alfa(e); curva(e * F * 8); }
-    g.strokeStyle = 'rgba(150,104,212,0.34)'; g.lineWidth = Math.max(4, 9 * s);
+    g.strokeStyle = rgba(P.gancho, 0.34); g.lineWidth = Math.max(4, 9 * s);
     for (const gc of ganchos) {
       g.globalAlpha = foco ? (foco.desc.has(gc[0]) ? 1 : 0.22) : modoCiclos ? 0.15 : 1;
       g.beginPath(); g.moveTo(gc[1], gc[2]); g.bezierCurveTo(gc[3], gc[4], gc[5], gc[6], gc[7], gc[8]); g.stroke();
     }
     g.globalAlpha = 1;
     const rg = g.createRadialGradient(PX[raiz], PY[raiz], 0, PX[raiz], PY[raiz], 26 * s + 8);
-    rg.addColorStop(0, 'rgba(205,160,255,0.75)'); rg.addColorStop(1, 'rgba(205,160,255,0)');
+    rg.addColorStop(0, rgba(P.raiz, 0.75)); rg.addColorStop(1, rgba(P.raiz, 0));
     g.fillStyle = rg; g.beginPath(); g.arc(PX[raiz], PY[raiz], 26 * s + 8, 0, 6.2832); g.fill();
 
     // 2) brilho médio, 3) filamentos finos e um leve acúmulo de luz
-    g.strokeStyle = 'rgba(175,105,230,0.07)'; g.lineWidth = Math.max(2, 4 * s);
+    g.strokeStyle = rgba(P.brilho, 0.07); g.lineWidth = Math.max(2, 4 * s);
     for (let e = 0; e < E; e++) { g.globalAlpha = alfa(e); for (let f = 0; f < F; f++) curva((e * F + f) * 8); }
-    g.strokeStyle = 'rgba(226,112,255,0.5)'; g.lineWidth = Math.max(0.6, 1.0 * s);
+    g.strokeStyle = rgba(P.fio, 0.5); g.lineWidth = Math.max(0.6, 1.0 * s);
     for (let e = 0; e < E; e++) { g.globalAlpha = alfa(e) * (A[e][2] ? 0.55 : 1); for (let f = 0; f < F; f++) curva((e * F + f) * 8); }
     g.globalCompositeOperation = 'lighter';
-    g.strokeStyle = 'rgba(255,150,255,0.035)'; g.lineWidth = Math.max(0.6, 1.0 * s);
+    g.strokeStyle = rgba(P.acumulo, 0.035); g.lineWidth = Math.max(0.6, 1.0 * s);
     for (let e = 0; e < E; e++) { g.globalAlpha = alfa(e); for (let f = 0; f < F; f++) curva((e * F + f) * 8); }
     g.globalCompositeOperation = 'source-over';
-    g.strokeStyle = 'rgba(210,165,245,0.6)'; g.lineWidth = 0.7;
+    g.strokeStyle = rgba(P.pelo, 0.6); g.lineWidth = 0.7;
     for (const [dono, pts] of pelos) {
       g.globalAlpha = foco ? (dono >= 0 ? (foco.desc.has(dono) ? 1 : 0.2) : (foco.ar[-1 - dono] ? 1 : 0.2)) : modoCiclos ? 0.15 : 1;
       linha(g, pts);
@@ -308,9 +346,9 @@ G.montar = function (D) {
     // imports circulares em vermelho
     if (cic.grupos.length) {
       // traço escuro embaixo e vermelho por cima, sem soma de luz, para não virar rosa no meio do roxo
-      for (const [cor, larg, sombra] of [['rgba(20,0,8,0.55)', 3.2, 0], ['#ff3b5c', modoCiclos ? 1.8 : 1.3, modoCiclos ? 10 : 6]]) {
+      for (const [cor, larg, sombra] of [['rgba(20,0,8,0.55)', 3.2, 0], [P.ciclo, modoCiclos ? 1.8 : 1.3, modoCiclos ? 10 : 6]]) {
         g.strokeStyle = cor; g.lineWidth = Math.max(0.9, larg * s);
-        g.shadowColor = '#ff2d55'; g.shadowBlur = sombra;
+        g.shadowColor = P.ciclo; g.shadowBlur = sombra;
         for (let e = 0; e < E; e++) if (cicloE[e]) { g.globalAlpha = foco && !foco.ar[e] ? 0.25 : 1; curva(e * F * 8); }
       }
       g.shadowBlur = 0; g.globalAlpha = 1;
@@ -359,13 +397,13 @@ G.montar = function (D) {
     for (const c of [g, gb]) {
       c.globalCompositeOperation = 'lighter';
       c.globalAlpha = c === g ? aT : 1;
-      c.shadowColor = '#ff5cf4'; c.shadowBlur = 16 * s + 4;
-      c.strokeStyle = 'rgba(255,110,245,0.5)'; c.lineWidth = 2.6 * s + 1; linha(c, principal);
+      c.shadowColor = P.sombra; c.shadowBlur = 16 * s + 4;
+      c.strokeStyle = rgba(P.glow, 0.5); c.lineWidth = 2.6 * s + 1; linha(c, principal);
       c.shadowBlur = 6 * s + 2;
-      c.strokeStyle = 'rgba(255,150,250,0.55)'; c.lineWidth = 0.9;
+      c.strokeStyle = rgba(P.tranca, 0.55); c.lineWidth = 0.9;
       for (const tp of trancas) linha(c, tp);
       for (const fk of forks) linha(c, fk);
-      c.strokeStyle = 'rgba(255,215,255,0.95)'; c.lineWidth = 1.5 * s + 0.6; linha(c, principal);
+      c.strokeStyle = rgba(P.meio, 0.95); c.lineWidth = 1.5 * s + 0.6; linha(c, principal);
       c.shadowBlur = 0; c.strokeStyle = '#fff'; c.lineWidth = 0.8; linha(c, principal);
       c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
     }
@@ -373,24 +411,24 @@ G.montar = function (D) {
     // 5) destaque do arquivo escolhido
     if (foco) {
       g.globalCompositeOperation = 'lighter';
-      g.shadowColor = '#ff5cf4'; g.shadowBlur = 8;
-      g.strokeStyle = 'rgba(255,175,255,0.85)'; g.lineWidth = Math.max(1, 1.5 * s);
+      g.shadowColor = P.sombra; g.shadowBlur = 8;
+      g.strokeStyle = rgba(P.destaque, 0.85); g.lineWidth = Math.max(1, 1.5 * s);
       for (let e = 0; e < E; e++) if (foco.ar[e]) curva(e * F * 8);
       g.shadowBlur = 0; g.globalCompositeOperation = 'source-over';
       for (const i of foco.desc) {
-        g.fillStyle = i === sel ? '#ff5cf4' : '#fff';
+        g.fillStyle = i === sel ? P.sombra : '#fff';
         g.beginPath(); g.arc(PX[i], PY[i], (i === sel ? 4 : 2.2) * Math.max(s, 0.8), 0, 6.2832); g.fill();
       }
-      g.fillStyle = '#c9a6ff';
+      g.fillStyle = P.dep;
       for (const i of inn[sel]) { g.beginPath(); g.arc(PX[i], PY[i], 2.2 * Math.max(s, 0.8), 0, 6.2832); g.fill(); }
     }
 
-    rotular(g);
+    rotular(g, opcoes.maxRotulos);
   }
 
-  function rotular(g) {
+  function rotular(g, limite) {
     const fs = Math.max(10, Math.min(12, W / 70)), gap = fs * 1.55, mg = 8;
-    const max = Math.max(6, Math.min(26, Math.floor(H / (gap * 1.15))));
+    const max = Math.min(limite || 99, Math.max(6, Math.min(26, Math.floor(H / (gap * 1.15)))));
     let lista;
     if (foco) {
       const viz = [...out[sel], ...inn[sel]].sort((a, b) => grau(b) - grau(a));
@@ -426,7 +464,7 @@ G.montar = function (D) {
         g.fillStyle = 'rgba(255,255,255,0.85)';
         g.beginPath(); g.arc(PX[r.i], PY[r.i], 1.6, 0, 6.2832); g.fill();
         g.lineWidth = 3.5; g.strokeStyle = 'rgba(0,0,0,0.85)'; g.strokeText(t, tx, r.ly);
-        g.fillStyle = r.i === sel ? '#ff8cf7' : modoCiclos ? '#ff9db0' : '#efe8f6'; g.fillText(t, tx, r.ly);
+        g.fillStyle = r.i === sel ? P.rotuloSel : modoCiclos ? P.cicloClaro : '#efe8f6'; g.fillText(t, tx, r.ly);
         rotulos.push({ i: r.i, x0: tx - 8, x1: tx + tw + 8, y0: r.ly - gap / 2, y1: r.ly + gap / 2 });
       }
     });
@@ -451,7 +489,7 @@ G.montar = function (D) {
       ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cv.width, cv.height);
       ctx.drawImage(base, 0, 0, cv.width, hh, 0, 0, cv.width, hh);
       const gr = ctx.createLinearGradient(0, hh - faixa, 0, hh);
-      gr.addColorStop(0, 'rgba(255,120,250,0)'); gr.addColorStop(1, 'rgba(255,170,255,0.3)');
+      gr.addColorStop(0, rgba(P.acumulo, 0)); gr.addColorStop(1, rgba(P.acumulo, 0.3));
       ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = gr; ctx.fillRect(0, hh - faixa, cv.width, faixa);
       ctx.globalCompositeOperation = 'source-over';
       return;
@@ -468,6 +506,100 @@ G.montar = function (D) {
     if (reduz) { estatico(); return; }
     if (animado) { revela = 0; t0 = 0; }
     ultimo = 0;
+  }
+
+  /* ---------- imagem para baixar ---------- */
+  // Desenha o grafo num canvas novo de w×h (px de CSS) com a escala dada, sem mexer na tela.
+  function renderizarEm(w, h, escala, opcoes) {
+    const salvo = [W, H, dpr, s, PX, PY, rotulos];
+    W = w; H = h; dpr = escala; s = Math.max(0.5, W / 850);
+    const c1 = document.createElement('canvas'), c2 = document.createElement('canvas');
+    c1.width = c2.width = Math.round(w * escala); c1.height = c2.height = Math.round(h * escala);
+    try { desenhar(c1, c2, opcoes); } finally { [W, H, dpr, s, PX, PY, rotulos] = salvo; }
+    const c = c1.getContext('2d');
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.3;
+    c.drawImage(c2, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+    return c1;
+  }
+  const FONTE = '"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace';
+  function texto(c, t, x, y, tam, cor, peso, maxL) {
+    c.font = (peso || 400) + ' ' + tam + 'px ' + FONTE; c.fillStyle = cor; c.textBaseline = 'alphabetic';
+    if (maxL) { while (t.length > 3 && c.measureText(t).width > maxL) t = t.slice(0, -2) + '…'; }
+    c.fillText(t, x, y);
+  }
+  // Quebra o título em até 3 linhas que caibam na largura.
+  function linhasTitulo(c, t, tam, larg) {
+    c.font = '600 ' + tam + 'px ' + FONTE;
+    const partes = t.split(/(?<=[/\s._-])/), linhas = [''];
+    for (const p of partes) {
+      const k = linhas.length - 1;
+      if (linhas[k] && c.measureText(linhas[k] + p).width > larg) linhas.push(p); else linhas[k] += p;
+    }
+    return linhas.slice(0, 3);
+  }
+  const resumo = () => N + ' arquivos · ' + E + ' imports' + (cic.grupos.length ? ' · ' + cic.grupos.length + (cic.grupos.length > 1 ? ' ciclos' : ' ciclo') : '');
+  function montarImagem(tipo) {
+    const cnv = document.createElement('canvas'), c = cnv.getContext('2d');
+    if (tipo === 'tela') {
+      cnv.width = cv.width; cnv.height = cv.height;
+      c.drawImage(base, 0, 0);
+      c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.3; c.drawImage(brilho, 0, 0);
+      return cnv;
+    }
+    const tam = { parede: [1080, 2340], post: [1080, 1350], social: [1280, 640] }[tipo];
+    cnv.width = tam[0]; cnv.height = tam[1];
+    c.fillStyle = '#000'; c.fillRect(0, 0, tam[0], tam[1]);
+    if (tipo === 'parede') {   // espaço livre em cima (relógio) e embaixo (ícones)
+      c.drawImage(renderizarEm(540, 900, 2), 0, 330);
+      texto(c, D.titulo, 60, 2200, 26, 'rgba(239,232,246,0.55)', 400, 960);
+    } else if (tipo === 'post') {
+      c.drawImage(renderizarEm(540, 560, 2), 0, 0);
+      const linhas = linhasTitulo(c, D.titulo, 52, 960);
+      let y = 1350 - 70 - 44 - (linhas.length - 1) * 60;
+      for (const l of linhas) { texto(c, l, 60, y, 52, '#efe8f6', 600); y += 60; }
+      texto(c, resumo() + ' · grafo neon', 60, y - 4, 26, P.css.mag, 400, 960);
+    } else {                    // prévia social do GitHub: texto à esquerda, grafo à direita
+      c.drawImage(renderizarEm(360, 320, 2, { maxRotulos: 10 }), 560, 0);
+      texto(c, 'grafo neon', 64, 110, 26, P.css.mag, 600);
+      const linhas = linhasTitulo(c, D.titulo, 50, 470);
+      let y = 250 - (linhas.length - 1) * 30;
+      for (const l of linhas) { texto(c, l, 64, y, 50, '#efe8f6', 600); y += 60; }
+      texto(c, N + ' arquivos · ' + E + ' imports', 64, y + 20, 26, 'rgba(239,232,246,0.7)', 400, 470);
+      texto(c, 'maior cadeia: ' + tronco.length + ' arquivos', 64, y + 62, 26, 'rgba(239,232,246,0.7)', 400, 470);
+      if (cic.grupos.length) texto(c, cic.grupos.length + (cic.grupos.length > 1 ? ' grupos' : ' grupo') + ' de imports circulares', 64, y + 104, 26, P.ciclo, 400, 470);
+    }
+    return cnv;
+  }
+  async function baixar(tipo) {
+    if (document.fonts) { try { await document.fonts.ready; } catch (e) { /* segue com a fonte reserva */ } }
+    const cnv = montarImagem(tipo);
+    const nome = 'grafo-neon-' + (D.titulo.toLowerCase().normalize('NFD').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '') || 'projeto') + '-' + tipo + '.png';
+    await new Promise(ok => cnv.toBlob(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = nome;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); ok(); }, 1500);
+    }, 'image/png'));
+  }
+  G.imagem = tipo => montarImagem(tipo).toDataURL('image/png');   // usado pelos testes e por quem quiser
+
+  function trocarPaleta(nome) {
+    if (!PALETAS[nome]) return;
+    paletaNome = nome; P = PALETAS[nome]; aplicarCss(P);
+    try { localStorage.setItem('grafo-neon-cor', nome); } catch (e) { /* sem armazenamento */ }
+    try {
+      if (/^https?:$/.test(location.protocol)) {
+        const q = new URLSearchParams(location.search);
+        if (nome === 'neon') q.delete('cor'); else q.set('cor', nome);
+        const qs = q.toString().replace(/%2F/gi, '/');
+        history.replaceState(null, '', location.pathname + (qs ? '?' + qs : ''));
+      }
+    } catch (e) { /* endereço não pôde mudar */ }
+    marcarPaleta();
+    desenhar(); mostrar(false);
+  }
+  function marcarPaleta() {
+    document.querySelectorAll('[data-cor]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cor === paletaNome)));
   }
 
   /* ---------- interação ---------- */
@@ -510,6 +642,15 @@ G.montar = function (D) {
   });
   on($('ficha'), 'click', ev => { const b = ev.target.closest('.chip'); if (b) selecionar(+b.dataset.i); });
   on($('limpar'), 'click', () => selecionar(-1));
+  marcarPaleta();
+  document.querySelectorAll('[data-cor]').forEach(b => on(b, 'click', () => trocarPaleta(b.dataset.cor)));
+  document.querySelectorAll('[data-exp]').forEach(b => on(b, 'click', async () => {
+    const menu = b.closest('details'), aviso = $('avisoImagem');
+    b.disabled = true;
+    try { await baixar(b.dataset.exp); if (aviso) aviso.textContent = 'Imagem baixada.'; }
+    catch (e) { if (aviso) aviso.textContent = 'Não consegui gerar a imagem (' + ((e && e.message) || e) + ').'; }
+    finally { b.disabled = false; if (menu) menu.open = false; }
+  }));
   if (secC) {
     on(secC, 'click', ev => {
       const b = ev.target.closest('.chip');

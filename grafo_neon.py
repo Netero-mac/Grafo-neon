@@ -463,7 +463,7 @@ MODELO_HTML = r"""<!DOCTYPE html>
   <section class="painel">
     <h1 class="titulo" id="titulo"></h1>
     <p class="meta"><span id="meta"></span> <a id="origem" href="#" target="_blank" rel="noopener" hidden>ver no GitHub ↗</a></p>
-    <p class="leg">Cada fio é um import entre dois arquivos do projeto: quem importa fica acima, o que é importado fica abaixo. O raio branco é a maior cadeia de dependências. Fios vermelhos são imports circulares.</p>
+    <p class="leg">Cada fio é um import entre dois arquivos do projeto: quem importa fica acima, o que é importado fica abaixo. O raio branco é a maior cadeia de dependências. Fios <span class="nome-cor-ciclo">vermelhos</span> são imports circulares.</p>
     <p class="cadeia" id="cadeia"></p>
     <section class="ciclos" id="ciclos" aria-labelledby="ciclosTitulo">
       <h3 id="ciclosTitulo">Imports circulares</h3>
@@ -477,6 +477,24 @@ MODELO_HTML = r"""<!DOCTYPE html>
       <button type="button" id="semente">Nova semente</button>
       <button type="button" id="limpar" hidden>Limpar seleção</button>
     </form>
+    <div class="acoes" id="acoes">
+      <div class="cores" role="group" aria-label="Cor do desenho">
+        <button type="button" class="cor" data-cor="neon" aria-pressed="true"><i></i>Neon</button>
+        <button type="button" class="cor" data-cor="ouro" aria-pressed="false"><i></i>Ouro</button>
+        <button type="button" class="cor" data-cor="gelo" aria-pressed="false"><i></i>Gelo</button>
+        <button type="button" class="cor" data-cor="brasa" aria-pressed="false"><i></i>Brasa</button>
+      </div>
+      <details class="baixar">
+        <summary>Baixar imagem</summary>
+        <div class="menu">
+          <button type="button" data-exp="tela">Como está na tela</button>
+          <button type="button" data-exp="parede">Papel de parede · 1080×2340</button>
+          <button type="button" data-exp="post">Post · 1080×1350</button>
+          <button type="button" data-exp="social">Prévia do GitHub · 1280×640</button>
+        </div>
+      </details>
+      <p class="aviso-img" id="avisoImagem" role="status" aria-live="polite"></p>
+    </div>
     <div class="ficha" id="ficha" hidden>
       <h3 id="fNome"></h3>
       <p class="cam" id="fCam"></p>
