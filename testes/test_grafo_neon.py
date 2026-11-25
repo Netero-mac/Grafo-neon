@@ -27,6 +27,13 @@ class TestAnalisador(unittest.TestCase):
                 d = grafo_neon.montar_grafo(FIXTURES / nome, False, 600, None)
                 self.assertEqual(texto(d), ESPERADO[nome]["arestas"])
 
+    def test_arquivos_soltos(self):
+        for nome in PROJETOS:
+            with self.subTest(projeto=nome):
+                d = grafo_neon.montar_grafo(FIXTURES / nome, False, 600, None)
+                self.assertEqual(d["soltos"], ESPERADO[nome]["soltos"])
+                self.assertEqual(d["nSoltos"], len(ESPERADO[nome]["soltos"]))
+
     def test_nomes_unicos(self):
         for nome in PROJETOS:
             with self.subTest(projeto=nome):

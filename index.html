@@ -38,14 +38,6 @@
   <section class="painel">
     <h2 class="titulo" id="titulo"></h2>
     <p class="meta"><span id="meta"></span> <a id="origem" href="#" target="_blank" rel="noopener" hidden>ver no GitHub ↗</a></p>
-    <p class="leg">Cada fio é um import entre dois arquivos do projeto: quem importa fica acima, o que é importado fica abaixo. O raio branco é a maior cadeia de dependências. Fios <span class="nome-cor-ciclo">vermelhos</span> são imports circulares.</p>
-    <p class="cadeia" id="cadeia"></p>
-    <section class="ciclos" id="ciclos" aria-labelledby="ciclosTitulo">
-      <h3 id="ciclosTitulo">Imports circulares</h3>
-      <p id="ciclosResumo"></p>
-      <ol id="ciclosLista"></ol>
-      <button type="button" id="btnCiclos" aria-pressed="false" hidden>Destacar ciclos</button>
-    </section>
     <form id="formBusca" autocomplete="off">
       <input id="busca" list="lista" placeholder="Buscar arquivo…" aria-label="Buscar arquivo no grafo">
       <datalist id="lista"></datalist>
@@ -78,6 +70,23 @@
       <h4>Importa</h4><div class="chips" id="fDeps"></div>
       <h4>É importado por</h4><div class="chips" id="fUsos"></div>
     </div>
+    <p class="leg">Cada fio é um import entre dois arquivos do projeto: quem importa fica acima, o que é importado fica abaixo. O raio branco é a maior cadeia de dependências. Fios <span class="nome-cor-ciclo">vermelhos</span> são imports circulares.</p>
+    <p class="cadeia" id="cadeia"></p>
+    <section class="ciclos" id="ciclos" aria-labelledby="ciclosTitulo">
+      <h3 id="ciclosTitulo">Imports circulares</h3>
+      <p id="ciclosResumo"></p>
+      <ol id="ciclosLista"></ol>
+      <button type="button" id="btnCiclos" aria-pressed="false" hidden>Destacar ciclos</button>
+    </section>
+    <section class="raiox" id="raiox" aria-labelledby="raioxTitulo">
+      <h3 id="raioxTitulo">Raio-X</h3>
+      <p id="rxResumo"></p>
+      <div class="rx-cols">
+        <div><h4>Mais críticos</h4><p class="rx-sub">quantos arquivos dependem dele, direta ou indiretamente</p><div id="rxCriticos"></div></div>
+        <div><h4>Mais dependentes</h4><p class="rx-sub">quantos arquivos ele puxa, direta ou indiretamente</p><div id="rxPesados"></div></div>
+      </div>
+      <details class="rx-soltos" id="rxSoltos" hidden><summary></summary><p></p></details>
+    </section>
     <p class="nota">Toque num rótulo ou perto de um fio para acender o que aquele arquivo puxa. Lê Python, PHP, Kotlin, Java e JavaScript/TypeScript. Sem login, o GitHub libera 60 consultas por hora e cada repositório gasta 2. Código no <a href="https://github.com/Netero-mac/Grafo-neon" target="_blank" rel="noopener">GitHub</a>.</p>
   </section>
 </main>

@@ -322,6 +322,7 @@ G.analisar = function (arquivos, opcoes) {
   const grau = new Map();
   for (const [a, b] of pares) { grau.set(a, (grau.get(a) || 0) + 1); grau.set(b, (grau.get(b) || 0) + 1); }
   let manter = [...grau.keys()];
+  const soltos = lista.map((a, i) => (nos[i].ling && !grau.has(i) ? a.caminho : null)).filter(Boolean);
   const maxNos = opcoes.maxNos || 600;
   if (manter.length > maxNos) {
     manter = manter.sort((a, b) => grau.get(b) - grau.get(a)).slice(0, maxNos);
@@ -343,7 +344,9 @@ G.analisar = function (arquivos, opcoes) {
     nos: nosF.map((n, j) => ({ n: rotulos[j], c: n.caminho, l: n.ling })),
     arestas: arestasF,
     ling: Object.fromEntries(Object.entries(contLing).sort((a, b) => b[1] - a[1])),
-    lidos: lista.length,
+    lidos: lista.filter((a, i) => nos[i].ling).length,
+    soltos: soltos.sort().slice(0, 300),
+    nSoltos: soltos.length,
   };
 };
 })();

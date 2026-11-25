@@ -73,4 +73,28 @@ G.ciclos = function (N, arestas) {
   grupos.sort((x, y) => y.nos.length - x.nos.length || x.nos[0] - y.nos[0]);
   return { comp, grupos };
 };
+/**
+ * Alcance de cada arquivo, contando todos os imports (leves também):
+ * puxa[i] = quantos arquivos i usa, direta ou indiretamente;
+ * afeta[i] = quantos arquivos dependem de i, direta ou indiretamente (o que pode quebrar se i mudar).
+ */
+G.raioX = function (N, arestas) {
+  const ida = Array.from({ length: N }, () => []), volta = Array.from({ length: N }, () => []);
+  for (const [a, b] of arestas) if (a !== b) { ida[a].push(b); volta[b].push(a); }
+  const visto = new Int32Array(N).fill(-1), fila = new Int32Array(N);
+  const alcance = (adj, s) => {
+    let ini = 0, fim = 0, n = 0;
+    visto[s] = s; fila[fim++] = s;
+    while (ini < fim) {
+      const u = fila[ini++];
+      for (const v of adj[u]) if (visto[v] !== s) { visto[v] = s; fila[fim++] = v; n++; }
+    }
+    return n;
+  };
+  const puxa = new Int32Array(N), afeta = new Int32Array(N);
+  for (let i = 0; i < N; i++) puxa[i] = alcance(ida, i);
+  visto.fill(-1);
+  for (let i = 0; i < N; i++) afeta[i] = alcance(volta, i);
+  return { puxa, afeta };
+};
 })(typeof window !== 'undefined' ? window : globalThis);

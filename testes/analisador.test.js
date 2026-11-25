@@ -22,6 +22,11 @@ for (const nome of Object.keys(ESPERADO).filter(k => !k.startsWith('_'))) {
     const grupos = G.ciclos(D.nos.length, D.arestas).grupos.map(g => g.nos.map(i => D.nos[i].c).sort());
     assert.deepEqual(grupos, ESPERADO[nome].ciclos);
   });
+  test(`arquivos soltos em ${nome}`, () => {
+    const D = analisar(nome);
+    assert.deepEqual(D.soltos, ESPERADO[nome].soltos);
+    assert.equal(D.nSoltos, ESPERADO[nome].soltos.length);
+  });
   test(`nomes curtos únicos em ${nome}`, () => {
     const nomes = analisar(nome).nos.map(n => n.n);
     assert.equal(new Set(nomes).size, nomes.length);
@@ -51,6 +56,15 @@ test('ciclos: o exemplo é o menor ciclo pelo arquivo mais ligado', () => {
   // 0↔1 direto, e também 0→2→3→0
   const { grupos } = G.ciclos(4, [[0, 1], [1, 0], [0, 2], [2, 3], [3, 0]]);
   assert.deepEqual(grupos[0].caminho, [0, 1, 0]);
+});
+
+test('raio-X: quanto cada arquivo puxa e quantos dependem dele', () => {
+  // 0→1→2 e 3→1; o leve 2→0 também conta para o alcance
+  const { puxa, afeta } = G.raioX(5, [[0, 1], [1, 2], [3, 1]]);
+  assert.deepEqual([...puxa], [2, 1, 0, 2, 0]);
+  assert.deepEqual([...afeta], [0, 2, 3, 0, 0]);
+  const comLeve = G.raioX(3, [[0, 1], [1, 2], [2, 0, 1]]);
+  assert.deepEqual([...comLeve.puxa], [2, 2, 2]);
 });
 
 test('linguagem: ignora pastas de dependências, gerados e testes', () => {

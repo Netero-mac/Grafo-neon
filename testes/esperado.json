@@ -18,6 +18,9 @@
         "app/modelos.py",
         "app/nucleo.py"
       ]
+    ],
+    "soltos": [
+      "app/solto.py"
     ]
   },
   "php": {
@@ -31,7 +34,8 @@
       "app/Services/Orcamento.php -> app/Models/Produto.php",
       "routes/web.php -> app/Http/Controllers/ProdutoController.php"
     ],
-    "ciclos": []
+    "ciclos": [],
+    "soltos": []
   },
   "kotlin": {
     "arestas": [
@@ -44,7 +48,8 @@
       "app/src/main/java/com/marco/caderno/data/Repositorio.java -> app/src/main/java/com/marco/caderno/data/Compra.kt",
       "app/src/main/java/com/marco/caderno/ui/theme/Theme.kt -> app/src/main/java/com/marco/caderno/ui/theme/Color.kt"
     ],
-    "ciclos": []
+    "ciclos": [],
+    "soltos": []
   },
   "js": {
     "arestas": [
@@ -62,6 +67,7 @@
         "src/servicos/api.ts",
         "src/util/index.ts"
       ]
-    ]
+    ],
+    "soltos": []
   }
 }

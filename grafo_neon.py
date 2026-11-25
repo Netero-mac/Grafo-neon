@@ -393,6 +393,7 @@ def montar_grafo(raiz: Path, sem_testes: bool, max_nos: int, titulo: str | None)
         grau[a] += 1
         grau[b] += 1
     manter = [i for i in range(len(nos)) if grau[i] > 0]
+    soltos = [n["caminho"] for i, n in enumerate(nos) if grau[i] == 0]
     if len(manter) > max_nos:
         manter = sorted(manter, key=lambda i: -grau[i])[:max_nos]
         conj = set(manter)
@@ -414,6 +415,8 @@ def montar_grafo(raiz: Path, sem_testes: bool, max_nos: int, titulo: str | None)
         "arestas": [[a, b, 1] if leve else [a, b] for a, b, leve in arestas_f],
         "ling": {NOME_LING[l]: c for l, c in Counter(n["ling"] for n in nos_f).most_common()},
         "lidos": len(arquivos),
+        "soltos": sorted(soltos)[:300],
+        "nSoltos": len(soltos),
     }
 
 
@@ -463,14 +466,6 @@ MODELO_HTML = r"""<!DOCTYPE html>
   <section class="painel">
     <h1 class="titulo" id="titulo"></h1>
     <p class="meta"><span id="meta"></span> <a id="origem" href="#" target="_blank" rel="noopener" hidden>ver no GitHub ↗</a></p>
-    <p class="leg">Cada fio é um import entre dois arquivos do projeto: quem importa fica acima, o que é importado fica abaixo. O raio branco é a maior cadeia de dependências. Fios <span class="nome-cor-ciclo">vermelhos</span> são imports circulares.</p>
-    <p class="cadeia" id="cadeia"></p>
-    <section class="ciclos" id="ciclos" aria-labelledby="ciclosTitulo">
-      <h3 id="ciclosTitulo">Imports circulares</h3>
-      <p id="ciclosResumo"></p>
-      <ol id="ciclosLista"></ol>
-      <button type="button" id="btnCiclos" aria-pressed="false" hidden>Destacar ciclos</button>
-    </section>
     <form id="formBusca" autocomplete="off">
       <input id="busca" list="lista" placeholder="Buscar arquivo…" aria-label="Buscar arquivo no grafo">
       <datalist id="lista"></datalist>
@@ -503,6 +498,23 @@ MODELO_HTML = r"""<!DOCTYPE html>
       <h4>Importa</h4><div class="chips" id="fDeps"></div>
       <h4>É importado por</h4><div class="chips" id="fUsos"></div>
     </div>
+    <p class="leg">Cada fio é um import entre dois arquivos do projeto: quem importa fica acima, o que é importado fica abaixo. O raio branco é a maior cadeia de dependências. Fios <span class="nome-cor-ciclo">vermelhos</span> são imports circulares.</p>
+    <p class="cadeia" id="cadeia"></p>
+    <section class="ciclos" id="ciclos" aria-labelledby="ciclosTitulo">
+      <h3 id="ciclosTitulo">Imports circulares</h3>
+      <p id="ciclosResumo"></p>
+      <ol id="ciclosLista"></ol>
+      <button type="button" id="btnCiclos" aria-pressed="false" hidden>Destacar ciclos</button>
+    </section>
+    <section class="raiox" id="raiox" aria-labelledby="raioxTitulo">
+      <h3 id="raioxTitulo">Raio-X</h3>
+      <p id="rxResumo"></p>
+      <div class="rx-cols">
+        <div><h4>Mais críticos</h4><p class="rx-sub">quantos arquivos dependem dele, direta ou indiretamente</p><div id="rxCriticos"></div></div>
+        <div><h4>Mais dependentes</h4><p class="rx-sub">quantos arquivos ele puxa, direta ou indiretamente</p><div id="rxPesados"></div></div>
+      </div>
+      <details class="rx-soltos" id="rxSoltos" hidden><summary></summary><p></p></details>
+    </section>
     <p class="nota">Toque num rótulo ou perto de um fio para acender o que aquele arquivo puxa. Gerado por grafo_neon.py.</p>
   </section>
 </main>

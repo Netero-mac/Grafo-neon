@@ -67,6 +67,22 @@ button:disabled{opacity:.55;cursor:progress}
 .seta{color:var(--alerta)}
 .fciclo{margin:0 0 12px;font-size:13px;color:#ffb3c1;line-height:2}
 #btnCiclos{border-color:#7a2a40;background:#1d0a12}
+.raiox{margin:0 0 22px;padding:14px 16px;border:1px solid var(--linha);border-radius:10px;background:#09060d}
+.raiox h3{font-size:15px;margin:0 0 6px;color:var(--mag);font-weight:600}
+.raiox>p{margin:0 0 14px;font-size:14px;color:#dcd2e8;max-width:70ch}
+.rx-cols{display:grid;gap:18px}
+@media(min-width:640px){.rx-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.rx-cols h4{font-size:14px;margin:0;color:var(--ink);font-weight:600}
+.rx-sub{margin:0 0 8px;font-size:12px;color:var(--dim)}
+.rx-linha{display:grid;grid-template-columns:minmax(0,10em) minmax(40px,1fr) 3em;align-items:center;gap:8px;margin:4px 0}
+.rx-linha .chip{display:block;justify-self:start;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rx-barra{height:8px;border-radius:4px;background:#1a1024;overflow:hidden}
+.rx-barra i{display:block;height:100%;background:linear-gradient(90deg,var(--lav),var(--mag));border-radius:4px}
+.rx-num{font-size:13px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rx-soltos{margin-top:14px;font-size:13px;color:var(--dim)}
+.rx-soltos summary{cursor:pointer;min-height:32px;display:flex;align-items:center;gap:6px}
+.rx-soltos p{margin:6px 0 0;overflow-wrap:anywhere}
+.leg{margin-top:22px}
 #btnCiclos[aria-pressed=true]{background:#3a0f1f;border-color:var(--alerta)}
 [hidden]{display:none!important}
 .acoes{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px;margin-top:12px}
@@ -86,5 +102,6 @@ button:disabled{opacity:.55;cursor:progress}
 .menu{position:absolute;z-index:5;top:calc(100% + 6px);left:0;width:min(320px,calc(100vw - 32px));display:grid;gap:2px;padding:6px;border:1px solid var(--linha);border-radius:12px;background:#0d0912;box-shadow:0 12px 30px #000}
 .menu button{text-align:left;border-color:transparent;background:transparent;font-size:15px}
 .menu button:hover{background:#1a1024}
-.aviso-img{flex-basis:100%;margin:0;font-size:13px;color:var(--dim);min-height:1.2em}
+.aviso-img{flex-basis:100%;margin:0;font-size:13px;color:var(--dim)}
+.aviso-img:empty{display:none}
 @media (prefers-reduced-motion:reduce){.barra i{transition:none}}

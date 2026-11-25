@@ -163,6 +163,33 @@ G.montar = function (D) {
     const bc = $('btnCiclos');
     bc.hidden = !cic.grupos.length; bc.setAttribute('aria-pressed', 'false'); bc.textContent = 'Destacar ciclos';
   }
+
+  // raio-X: quanto cada arquivo puxa e quanto depende dele
+  const rx = G.raioX(N, A), secR = $('raiox');
+  if (secR) {
+    const pct = v => Math.round(100 * v / Math.max(1, N - 1));
+    const linhas = val => [...Array(N).keys()].filter(i => val[i] > 0)
+      .sort((a, b) => val[b] - val[a] || grau(b) - grau(a)).slice(0, 6)
+      .map(i => '<div class="rx-linha">' + nomeBtn(i) + '<span class="rx-barra"><i style="width:' + Math.max(3, pct(val[i])) +
+        '%"></i></span><span class="rx-num">' + val[i] + '</span></div>').join('') || '<span class="vazio">nenhum</span>';
+    $('rxCriticos').innerHTML = linhas(rx.afeta);
+    $('rxPesados').innerHTML = linhas(rx.puxa);
+    let maisCritico = 0;
+    for (let i = 1; i < N; i++) if (rx.afeta[i] > rx.afeta[maisCritico]) maisCritico = i;
+    let txt = 'Maior cadeia: ' + tronco.length + ' arquivos. Cada arquivo importa em média ' + (E / N).toFixed(1).replace('.', ',') +
+      ' outros do projeto. Uma mudança em ' + D.nos[maisCritico].n + ' pode chegar a ' + pct(rx.afeta[maisCritico]) + '% dos arquivos.';
+    if (D.lidos) {
+      const cortados = D.lidos - N - (D.nSoltos || 0);
+      txt += ' Dos ' + D.lidos + ' arquivos de código lidos, ' + N + ' estão no desenho' + (cortados > 0 ? ' (' + cortados + ' ficaram de fora pelo limite de tamanho)' : '') + '.';
+    }
+    $('rxResumo').textContent = txt;
+    const ds = $('rxSoltos');
+    ds.hidden = !D.nSoltos;
+    if (D.nSoltos) {
+      ds.querySelector('summary').textContent = D.nSoltos + (D.nSoltos > 1 ? ' arquivos sem nenhuma ligação' : ' arquivo sem nenhuma ligação') + ' (fora do desenho)';
+      ds.querySelector('p').textContent = D.soltos.join(' · ') + (D.nSoltos > D.soltos.length ? ' …' : '');
+    }
+  }
   $('cadeia').innerHTML = '<b>Maior cadeia (' + tronco.length + ' arquivos):</b> ' + tronco.map(i => esc(D.nos[i].n)).join(' → ');
   $('lista').innerHTML = D.nos.map(n => '<option value="' + esc(n.n) + '">').join('');
 
@@ -620,7 +647,7 @@ G.montar = function (D) {
       a.target = '_blank'; a.rel = 'noopener'; a.textContent = no.c + ' ↗';
       cam.appendChild(a);
     } else cam.textContent = no.c;
-    $('fNum').textContent = 'importa ' + out[i].length + ' direto · puxa ' + (foco.desc.size - 1) + ' no total · usado por ' + inn[i].length;
+    $('fNum').textContent = 'importa ' + out[i].length + ' direto (' + rx.puxa[i] + ' no total) · importado por ' + inn[i].length + ' direto (' + rx.afeta[i] + ' no total)';
     const fc = $('fCiclo');
     if (fc) {
       const gr = grupoDe.get(i);
@@ -651,6 +678,10 @@ G.montar = function (D) {
     catch (e) { if (aviso) aviso.textContent = 'Não consegui gerar a imagem (' + ((e && e.message) || e) + ').'; }
     finally { b.disabled = false; if (menu) menu.open = false; }
   }));
+  if (secR) on(secR, 'click', ev => {
+    const b = ev.target.closest('.chip');
+    if (b) { selecionar(+b.dataset.i); fig.scrollIntoView({ behavior: reduz ? 'auto' : 'smooth', block: 'start' }); }
+  });
   if (secC) {
     on(secC, 'click', ev => {
       const b = ev.target.closest('.chip');

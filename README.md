@@ -47,7 +47,7 @@ python3 grafo_neon.py caminho/do/projeto -o meu_grafo.html --titulo "Meu App"
 python3 grafo_neon.py caminho/do/projeto --sem-testes --max-nos 300 --json
 ```
 
-O script só usa a biblioteca padrão do Python (3.10+) e gera uma página HTML única que funciona offline. Ele precisa de `render.js` e `estilo.css` na mesma pasta, então baixe o repositório inteiro.
+O script só usa a biblioteca padrão do Python (3.10+) e gera uma página HTML única que funciona offline. Ele precisa de `render.js`, `grafo.js` e `estilo.css` na mesma pasta, então baixe o repositório inteiro.
 
 ## Linguagens
 
@@ -71,12 +71,22 @@ Só contam os imports que rodam no carregamento. Ficam de fora:
 
 Esses imports aparecem mais apagados no desenho. Em Python e JS, um ciclo pode quebrar a importação conforme a ordem em que os arquivos carregam. Em Kotlin, Java e PHP ele não dá erro, mas indica acoplamento forte.
 
+## Raio-X
+
+O painel **Raio-X** mostra:
+
+- **Mais críticos:** os arquivos dos quais mais arquivos dependem, direta ou indiretamente. São os que mais podem quebrar o projeto se mudarem.
+- **Mais dependentes:** os arquivos que puxam mais coisa.
+- **Resumo:** a maior cadeia, a média de imports por arquivo e quantos arquivos ficaram de fora do desenho por não ter nenhuma ligação. Toque no resumo para ver a lista desses arquivos.
+
+A ficha de cada arquivo também mostra esses números: quantos ele importa e por quantos é importado, direto e no total.
+
 ## Como funciona
 
 1. **Lista de arquivos:** o site pede a árvore do repositório à API do GitHub (2 consultas). Se o limite estourar, ele usa o espelho do [jsDelivr](https://www.jsdelivr.com/).
 2. **Conteúdo:** baixa os arquivos de código do `raw.githubusercontent.com`, 10 de cada vez, e passa para o jsDelivr se o GitHub recusar.
 3. **Análise** (`analisador.js`): acha os imports de cada arquivo e os transforma em arestas `a → b` ("a importa b").
-4. **Ciclos** (`grafo.js`): componentes fortemente conexos (Tarjan) e um ciclo curto de exemplo para cada grupo, achado com busca em largura.
+4. **Ciclos e raio-X** (`grafo.js`): componentes fortemente conexos (Tarjan), com um ciclo curto de exemplo por grupo achado com busca em largura, e o alcance de cada arquivo para frente e para trás.
 5. **Desenho** (`render.js`):
    - quebra os ciclos com uma busca em profundidade;
    - organiza os arquivos em camadas;
@@ -117,7 +127,7 @@ Os projetos em `testes/fixtures` (Python, PHP, Kotlin/Java e JS/TS) cobrem os ca
 index.html      página do site
 app.js          busca o repositório no GitHub e mostra o progresso
 analisador.js   acha os imports (Python, PHP, Kotlin/Java, JS/TS)
-grafo.js        algoritmos de grafo sem tela (ciclos), compartilhado com o script
+grafo.js        algoritmos de grafo sem tela (ciclos, raio-X), compartilhado com o script
 render.js       desenho neon em Canvas, compartilhado com o script
 estilo.css      estilos, compartilhados com o script
 exemplo.json    grafo de exemplo mostrado na abertura (núcleo do pytest)
