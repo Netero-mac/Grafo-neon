@@ -38,7 +38,7 @@ try {
 } catch (e) { /* sem acesso ao armazenamento */ }
 function aplicarCss(P) {
   const r = document.documentElement.style;
-  r.setProperty('--mag', P.css.mag); r.setProperty('--lav', P.css.lav);
+  r.setProperty('--mag', P.css.mag); r.setProperty('--lav', P.css.lav); r.setProperty('--alerta', P.ciclo);
   document.querySelectorAll('.nome-cor-ciclo').forEach(el => { el.textContent = P.cicloNome; });
 }
 

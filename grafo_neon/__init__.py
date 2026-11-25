@@ -793,7 +793,7 @@ MODELO_HTML = r"""<!DOCTYPE html>
 <title>__TITULO__ · Grafo neon</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Tilt+Neon&display=swap" rel="stylesheet">
 <style>
 /*__CSS__*/
 </style>
@@ -801,6 +801,7 @@ MODELO_HTML = r"""<!DOCTYPE html>
 <body>
 <main>
   <div class="fig" id="fig"><canvas id="cv" role="img" aria-label="Grafo de dependências do projeto"></canvas></div>
+  <div class="fio-neon" aria-hidden="true"></div>
   <section class="painel">
     <h1 class="titulo" id="titulo"></h1>
     <p class="meta"><span id="meta"></span> <a id="origem" href="#" target="_blank" rel="noopener" hidden>ver no GitHub ↗</a></p>

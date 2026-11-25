@@ -10,16 +10,16 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Tilt+Neon&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="grafo_neon/estilo.css">
 </head>
 <body>
 <header class="topo">
-  <h1 class="marca">Grafo <span>neon</span></h1>
+  <h1 class="marca"><svg class="raio" viewBox="0 0 16 24" aria-hidden="true"><path d="M10 0 1 13.5h6L5 24l10-14.5H9L12 0z"/></svg>Grafo <span>neon</span></h1>
   <p class="sub">Cole o link de um repositório público do GitHub e veja os imports entre os arquivos virarem um raio.</p>
   <form id="formRepo" autocomplete="off">
     <input id="link" placeholder="github.com/dono/repo" inputmode="url" autocapitalize="off" spellcheck="false" aria-label="Link do repositório no GitHub">
-    <button type="submit" id="ir" class="forte">Desenhar</button>
+    <button type="submit" id="ir" class="forte"><svg class="raio" viewBox="0 0 16 24" aria-hidden="true"><path d="M10 0 1 13.5h6L5 24l10-14.5H9L12 0z"/></svg>Desenhar</button>
   </form>
   <div class="opcoes">
     <label><input type="checkbox" id="semTestes" checked> Ignorar testes</label>
@@ -35,6 +35,7 @@
 
 <main>
   <div class="fig" id="fig"><canvas id="cv" role="img" aria-label="Grafo de dependências do projeto"></canvas></div>
+  <div class="fio-neon" aria-hidden="true"></div>
   <section class="painel">
     <h2 class="titulo" id="titulo"></h2>
     <p class="meta"><span id="meta"></span> <a id="origem" href="#" target="_blank" rel="noopener" hidden>ver no GitHub ↗</a></p>
