@@ -6,7 +6,7 @@
 const fs = require('fs'), path = require('path');
 globalThis.window = globalThis;
 require('../../analisador.js');
-require('../../grafo.js');
+require('../../grafo_neon/grafo.js');
 const G = globalThis.GrafoNeon;
 
 function lerPasta(pasta, semTestes) {

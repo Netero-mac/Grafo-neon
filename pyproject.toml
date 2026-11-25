@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grafo-neon"
+dynamic = ["version"]
+description = "Desenha as dependências entre os arquivos de um projeto como um raio neon, numa página HTML que funciona offline."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Netero-mac" }]
+keywords = ["dependencias", "grafo", "imports", "imports circulares", "visualizacao"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Natural Language :: Portuguese (Brazilian)",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development",
+]
+
+[project.urls]
+Site = "https://netero-mac.github.io/Grafo-neon/"
+Repositorio = "https://github.com/Netero-mac/Grafo-neon"
+
+[project.scripts]
+grafo-neon = "grafo_neon:main"
+
+[tool.setuptools]
+packages = ["grafo_neon"]
+
+[tool.setuptools.dynamic]
+version = { attr = "grafo_neon.__version__" }
+
+[tool.setuptools.package-data]
+grafo_neon = ["render.js", "grafo.js", "estilo.css"]

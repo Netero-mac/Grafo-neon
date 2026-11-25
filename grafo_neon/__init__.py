@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
 """
-grafo_neon.py — desenha as dependências de um repositório no estilo "raio neon".
+grafo_neon — desenha as dependências de um repositório no estilo "raio neon".
 
 Versão de linha de comando do site Grafo neon, para pastas no seu computador
 (inclusive projetos privados). Lê os arquivos de código (Python, JavaScript/
 TypeScript, PHP, Kotlin, Java, Dart, Go, C/C++, C# e Rust), descobre quem importa
 quem e gera UMA página HTML que funciona offline, com o mesmo desenho do site.
 
-Precisa de render.js e estilo.css na mesma pasta deste arquivo.
+Uso (depois de instalar com pip, ou com python -m grafo_neon na pasta do repositório):
+    grafo-neon caminho/do/repo
+    grafo-neon caminho/do/repo -o meu_grafo.html --titulo "Meu App"
+    grafo-neon caminho/do/repo --sem-testes --max-nos 300
 
-Uso:
-    python3 grafo_neon.py caminho/do/repo
-    python3 grafo_neon.py caminho/do/repo -o meu_grafo.html --titulo "Meu App"
-    python3 grafo_neon.py caminho/do/repo --sem-testes --max-nos 300
-
-Só usa a biblioteca padrão do Python (3.8+).
+Só usa a biblioteca padrão do Python (3.10+). render.js, grafo.js e estilo.css vêm junto no pacote.
 """
 
 from __future__ import annotations
@@ -30,6 +28,8 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
+
+__version__ = "0.1.0"
 
 PASTAS_IGNORADAS = {
     ".git", ".github", ".gradle", ".idea", ".vscode", "node_modules", "vendor",
@@ -758,7 +758,8 @@ def montar_grafo(raiz: Path, sem_testes: bool, max_nos: int, titulo: str | None)
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(description="Desenha as dependências de um repositório no estilo raio neon.")
+    p = argparse.ArgumentParser(prog="grafo-neon", description="Desenha as dependências de um repositório no estilo raio neon.")
+    p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     p.add_argument("repo", help="pasta do repositório")
     p.add_argument("-o", "--saida", default="grafo_neon.html", help="arquivo HTML de saída")
     p.add_argument("--titulo", help="título mostrado na página (padrão: nome da pasta)")
@@ -852,7 +853,7 @@ MODELO_HTML = r"""<!DOCTYPE html>
       </div>
       <details class="rx-soltos" id="rxSoltos" hidden><summary></summary><p></p></details>
     </section>
-    <p class="nota">Toque num rótulo ou perto de um fio para acender o que aquele arquivo puxa. Gerado por grafo_neon.py.</p>
+    <p class="nota">Toque num rótulo ou perto de um fio para acender o que aquele arquivo puxa. Gerado pelo <a href="https://netero-mac.github.io/Grafo-neon/" target="_blank" rel="noopener">Grafo neon</a>.</p>
   </section>
 </main>
 <script>
@@ -873,7 +874,7 @@ def gerar_html(dados: dict) -> str:
         render = (PASTA / "render.js").read_text(encoding="utf-8")
         grafo = (PASTA / "grafo.js").read_text(encoding="utf-8")
     except OSError:
-        sys.exit("Não achei estilo.css, grafo.js e render.js ao lado do grafo_neon.py. Baixe o repositório inteiro.")
+        sys.exit("Não achei estilo.css, grafo.js e render.js na pasta do pacote grafo_neon. Reinstale o pacote.")
     js = json.dumps(dados, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     return (MODELO_HTML
             .replace("__TITULO__", html.escape(dados["titulo"]))

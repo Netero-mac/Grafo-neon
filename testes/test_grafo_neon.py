@@ -1,4 +1,4 @@
-"""Testes do grafo_neon.py (linha de comando). Rode com: python -m unittest discover -s testes -v"""
+"""Testes do pacote grafo_neon (linha de comando). Rode com: python -m unittest discover -s testes -v"""
 import json
 import shutil
 import subprocess
@@ -58,9 +58,9 @@ class TestPagina(unittest.TestCase):
     def test_gera_html_completo(self):
         with tempfile.TemporaryDirectory() as tmp:
             saida = Path(tmp) / "g.html"
-            r = subprocess.run([sys.executable, str(RAIZ / "grafo_neon.py"), str(FIXTURES / "python"),
+            r = subprocess.run([sys.executable, "-m", "grafo_neon", str(FIXTURES / "python"),
                                 "-o", str(saida), "--json", "--titulo", "Teste </script>"],
-                               capture_output=True, text=True)
+                               capture_output=True, text=True, cwd=RAIZ)
             self.assertEqual(r.returncode, 0, r.stderr)
             html = saida.read_text(encoding="utf-8")
             self.assertNotIn("/*__", html, "sobrou marcador do modelo")

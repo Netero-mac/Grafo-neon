@@ -8,7 +8,7 @@ Paste a link to any public GitHub repository and see the dependencies between it
 
 **Site:** https://netero-mac.github.io/Grafo-neon/ (the interface is in Portuguese; the buttons are explained below)
 
-![Grafo neon drawing werkzeug: the lightning appears top to bottom, switches palettes and highlights circular imports in red](docs/demo.gif)
+![Grafo neon drawing werkzeug: the lightning appears top to bottom, switches palettes and highlights circular imports in red](https://raw.githubusercontent.com/Netero-mac/Grafo-neon/main/docs/demo.gif)
 
 Each strand is an import between two files of the project: the importer sits above, the imported file below. The white lightning bolt in the middle is the project's **longest import chain**. Tap a label to light up everything that file pulls in and see what it imports and who imports it.
 
@@ -44,12 +44,15 @@ The chosen color is saved in the browser and travels with the link (`&cor=ouro`)
 ### In the terminal (local folders and private projects)
 
 ```bash
-python3 grafo_neon.py path/to/project
-python3 grafo_neon.py path/to/project -o my_graph.html --titulo "My App"
-python3 grafo_neon.py path/to/project --sem-testes --max-nos 300 --json
+pip install git+https://github.com/Netero-mac/Grafo-neon   # installs straight from GitHub
+grafo-neon path/to/project
+grafo-neon path/to/project -o my_graph.html --titulo "My App"
+grafo-neon path/to/project --sem-testes --max-nos 300 --json
 ```
 
-The script uses only the Python standard library (3.10+) and writes a single HTML page that works offline. It needs `render.js`, `grafo.js` and `estilo.css` in the same folder, so download the whole repository.
+Once the package is on PyPI, installing becomes `pip install grafo-neon`. Without installing anything, you can run `python3 -m grafo_neon path/to/project` from this repository's folder.
+
+The command uses only the Python standard library (3.10+) and writes a single HTML page that works offline.
 
 ## Languages
 
@@ -121,7 +124,7 @@ Everything runs in the browser. There is no server, and nothing is sent anywhere
 
 ```bash
 node --test testes/analisador.test.js        # the site's analyzer and graph algorithms
-python -m unittest discover -s testes -v     # the script, the generated page and parity with the site
+python -m unittest discover -s testes -v     # the command, the generated page and parity with the site
 ```
 
 The projects in `testes/fixtures` (one per language) cover the tricky cases:
@@ -134,7 +137,7 @@ The projects in `testes/fixtures` (one per language) cover the tricky cases:
 - `import type`, `import()` and `require`;
 - Dart `package:`, Go's `go.mod` and test files, include by folder in C, `global using` in C#, and `use` with braces and `super::` in Rust.
 
-`testes/esperado.json` holds the correct imports and cycles for each project, written by hand. Both analyzers are checked against that answer key and against each other. GitHub Actions runs everything on every push, with Python 3.10 and 3.13.
+`testes/esperado.json` holds the correct imports and cycles for each project, written by hand. Both analyzers are checked against that answer key and against each other. GitHub Actions runs everything on every push, with Python 3.10 and 3.13, and also builds, installs and runs the package.
 
 ## Structure
 
@@ -142,11 +145,13 @@ The projects in `testes/fixtures` (one per language) cover the tricky cases:
 index.html      the site's page
 app.js          fetches the repository from GitHub and shows progress
 analisador.js   finds imports (Python, JS/TS, PHP, Kotlin/Java, Dart, Go, C/C++, C#, Rust)
-grafo.js        graph algorithms with no UI (cycles, X-ray), shared with the script
-render.js       neon Canvas drawing, shared with the script
-estilo.css      styles, shared with the script
 exemplo.json    example graph shown on first load (pytest's core)
-grafo_neon.py   command-line version for local folders
+grafo_neon/     Python package (the grafo-neon command) plus the files the site also uses:
+  __init__.py     Python analyzers and page generation
+  grafo.js        graph algorithms with no UI (cycles, X-ray)
+  render.js       neon Canvas drawing
+  estilo.css      styles
+pyproject.toml  package configuration for PyPI (how to publish: docs/PUBLICAR.md, in Portuguese)
 testes/         tests, sample projects and answer key
 ```
 

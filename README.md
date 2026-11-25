@@ -8,7 +8,7 @@ Cole o link de um repositório público do GitHub e veja as dependências entre 
 
 **Site:** https://netero-mac.github.io/Grafo-neon/
 
-![Animação do Grafo neon desenhando o werkzeug: o raio aparece de cima para baixo, troca de paleta e destaca os imports circulares em vermelho](docs/demo.gif)
+![Animação do Grafo neon desenhando o werkzeug: o raio aparece de cima para baixo, troca de paleta e destaca os imports circulares em vermelho](https://raw.githubusercontent.com/Netero-mac/Grafo-neon/main/docs/demo.gif)
 
 Cada fio é um import entre dois arquivos do projeto: quem importa fica em cima, o que é importado fica embaixo. O raio branco no meio é a **maior cadeia de imports** do projeto. Toque num rótulo para acender tudo o que aquele arquivo puxa e ver a lista do que ele importa e de quem o importa.
 
@@ -44,12 +44,15 @@ A cor escolhida fica salva no navegador e vai junto no link (`&cor=ouro`).
 ### No terminal (pastas locais e projetos privados)
 
 ```bash
-python3 grafo_neon.py caminho/do/projeto
-python3 grafo_neon.py caminho/do/projeto -o meu_grafo.html --titulo "Meu App"
-python3 grafo_neon.py caminho/do/projeto --sem-testes --max-nos 300 --json
+pip install git+https://github.com/Netero-mac/Grafo-neon   # instala direto do GitHub
+grafo-neon caminho/do/projeto
+grafo-neon caminho/do/projeto -o meu_grafo.html --titulo "Meu App"
+grafo-neon caminho/do/projeto --sem-testes --max-nos 300 --json
 ```
 
-O script só usa a biblioteca padrão do Python (3.10+) e gera uma página HTML única que funciona offline. Ele precisa de `render.js`, `grafo.js` e `estilo.css` na mesma pasta, então baixe o repositório inteiro.
+Quando o pacote estiver no PyPI, a instalação vira `pip install grafo-neon`. Sem instalar nada, dá para rodar `python3 -m grafo_neon caminho/do/projeto` na pasta deste repositório.
+
+O comando só usa a biblioteca padrão do Python (3.10+) e gera uma página HTML única que funciona offline.
 
 ## Linguagens
 
@@ -121,7 +124,7 @@ Tudo roda no navegador. Não existe servidor, e nada é enviado para lugar nenhu
 
 ```bash
 node --test testes/analisador.test.js        # analisador do site e algoritmos de grafo
-python -m unittest discover -s testes -v     # script, página gerada e paridade com o site
+python -m unittest discover -s testes -v     # comando, página gerada e paridade com o site
 ```
 
 Os projetos em `testes/fixtures` (um por linguagem) cobrem os casos difíceis:
@@ -134,7 +137,7 @@ Os projetos em `testes/fixtures` (um por linguagem) cobrem os casos difíceis:
 - `import type`, `import()` e `require`;
 - `package:` do Dart, `go.mod` e arquivos de teste do Go, include por pasta no C, `global using` no C#, e `use` com chaves e `super::` no Rust.
 
-`testes/esperado.json` tem, escritos à mão, os imports e ciclos certos de cada projeto. Os dois analisadores são conferidos contra esse gabarito e um contra o outro. O GitHub Actions roda tudo a cada envio, com Python 3.10 e 3.13.
+`testes/esperado.json` tem, escritos à mão, os imports e ciclos certos de cada projeto. Os dois analisadores são conferidos contra esse gabarito e um contra o outro. O GitHub Actions roda tudo a cada envio, com Python 3.10 e 3.13, e também constrói, instala e roda o pacote.
 
 ## Estrutura
 
@@ -142,11 +145,13 @@ Os projetos em `testes/fixtures` (um por linguagem) cobrem os casos difíceis:
 index.html      página do site
 app.js          busca o repositório no GitHub e mostra o progresso
 analisador.js   acha os imports (Python, JS/TS, PHP, Kotlin/Java, Dart, Go, C/C++, C#, Rust)
-grafo.js        algoritmos de grafo sem tela (ciclos, raio-X), compartilhado com o script
-render.js       desenho neon em Canvas, compartilhado com o script
-estilo.css      estilos, compartilhados com o script
 exemplo.json    grafo de exemplo mostrado na abertura (núcleo do pytest)
-grafo_neon.py   versão de linha de comando para pastas locais
+grafo_neon/     pacote Python (comando grafo-neon) e os arquivos que o site também usa:
+  __init__.py     analisadores em Python e geração da página
+  grafo.js        algoritmos de grafo sem tela (ciclos, raio-X)
+  render.js       desenho neon em Canvas
+  estilo.css      estilos
+pyproject.toml  configuração do pacote para o PyPI (como publicar: docs/PUBLICAR.md)
 testes/         testes, projetos de exemplo e gabarito
 ```
 
