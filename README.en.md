@@ -156,3 +156,7 @@ testes/         tests, sample projects and answer key
 ```
 
 To run the site locally: `python3 -m http.server` in the project folder, then open `http://localhost:8000`.
+
+## License
+
+Released under the MIT License. See [LICENSE](LICENSE).

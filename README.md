@@ -156,3 +156,7 @@ testes/         testes, projetos de exemplo e gabarito
 ```
 
 Para rodar o site no seu computador: `python3 -m http.server` na pasta do projeto, depois abra `http://localhost:8000`.
+
+## Licença
+
+Distribuído sob a licença MIT. Veja [LICENSE](LICENSE).
